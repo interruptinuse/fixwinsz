@@ -1,20 +1,20 @@
 # Install to $HOME/.local or /usr/local.
 
-fixcols.so: fixcols.o
-	$(CC) -shared -o $@ $<
+fixwinsz.so: fixwinsz.so.o
+	$(CC) -o $@ -shared -Wl,--no-as-needed $(LDFLAGS) $< -ldl
 
-fixcols.o: fixcols.c get-tiocgwinsz
+fixwinsz.so.o: fixwinsz.so.c get-tiocgwinsz
 	$(eval TIOCGWINSZ := $(shell ./get-tiocgwinsz))
-	$(CC) -c $(CFLAGS) -DTIOCGWINSZ=$(TIOCGWINSZ) -fpic -o $@ $<
+	$(CC) -c -o $@ -DTIOCGWINSZ=$(TIOCGWINSZ) -fpic $(CFLAGS) $<
 
 get-tiocgwinsz: get-tiocgwinsz.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) -o $@ $(CFLAGS) $<
 
 clean:
-	rm -f fixcols.so fixcols.o get-tiocgwinsz
+	rm -f fixwinsz.so fixwinsz.so.o get-tiocgwinsz
 
-install: fixcols.so
-	install fixcols.so "${PREFIX}/lib"
-	install fixcols "${PREFIX}/bin"
+install: fixwinsz.so
+	install fixwinsz.so "${PREFIX}/lib"
+	install fixwinsz "${PREFIX}/bin"
 
 .PHONY: clean install

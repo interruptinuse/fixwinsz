@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# Usage: fixwinsz [WIDTH][xHEIGHT] COMMAND [ARGS...]
+# Restrict terminal size assumed by programs to WIDTHxHEIGHT.
+
+if [ -z "$PREFIX" ]; then
+	if [ "$(id -u)" = 0 ]; then
+		PREFIX=/usr/local
+	else
+		PREFIX="$HOME/.local"
+	fi
+fi
+
+if [ -z "$FIXWINSZ_SO" ]; then
+	FIXWINSZ_SO="$PREFIX/lib/fixwinsz.so"
+fi
+
+if [ ! -e "$FIXWINSZ_SO" ]; then
+	echo "fixcols: ERROR: fixwinsz library does not exist: $FIXWINSZ_SO" 1>&2
+	exit 1
+fi
+
+WINSZ="$1" ; shift 1
+
+WINSZ_COLS="$(echo "$WINSZ" | grep -Po '^\d+')"
+WINSZ_ROWS="$(echo "$WINSZ" | grep -Po '(?<=\D)\d+$')"
+LD_PRELOAD="$FIXWINSZ_SO"
+export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
+"$@"

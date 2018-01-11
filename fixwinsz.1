@@ -1,0 +1,57 @@
+.\"
+.Dd January 11, 2018
+.Os
+.Dt FIXWINSZ 1
+.IX Title "FIXWINSZ 1"
+.TH FIXWINSZ 1 "2018-01-11" "fixwinsz 0.01" "Restrict terminal size assumed by programs"
+
+.SH "NAME"
+.IX Header "NAME"
+.Nm fixwinsz
+.Nd restrict terminal size assumed by programs
+
+.SH "SYNOPSIS"
+.IX Header "SYNOPSIS"
+.B "fixwinsz"
+.I "[WIDTH][xHEIGHT] COMMAND [ARGS]..."
+
+.SH "DESCRIPTION"
+.IX Header "DESCRIPTION"
+.IR fixwinsz (1)
+is an LD_PRELOAD wrapper which hooks
+.IR ioctl (2)
+calls.  If a given ioctl is
+.BR TIOCGWINSZ ,
+which is the method that Linux programs use to get the size of the parent
+terminal in columns and rows,
+.IR fixwinsz (1)
+will limit the returned area size to
+.IR WIDTHxHEIGHT .
+
+.SH BUGS
+.IX Header "BUGS"
+.IP \[bu] 2
+Some interactive curses programs like
+.IR vim (1)
+will leave lasting effects if launched under
+.IR fixwinsz (1).
+The utility does not currently solve this problem (see RATIONALE);
+run any fullscreen curses application again to fix this.
+
+.SH RATIONALE
+.IX Header "RATIONALE"
+.IR fixwinsz (1)
+was created to force
+.IR wget (1)'s
+progress bar to stay limited to a reasonable size, thus avoiding the problem
+of garbage symbols all over the place any time the terminal would get resized.
+It is unlikely that this software will ever become sophisticated enough
+for more complex terminal-related problems.
+
+.SH SEE ALSO
+.IX Header "SEE ALSO"
+.IR ld.so (8),
+.IR dlsym (3),
+.IR ioctl (2),
+.IR ioctl_tty (2),
+.IR ncurses (3NCURSES)
