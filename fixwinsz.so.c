@@ -50,7 +50,7 @@ int ioctl(int d, unsigned long rq, char *argp) {
     char *rows_env = getenv(ROWS_ENV);
     errno = 0;
     int rows = rows_env != NULL ? strtol(rows_env, NULL, 0) : 0;
-    if(errno) cols = 0;
+    if(errno) rows = 0;
 
     if(cols > 0 && WS_COL > cols) {
       WS_COL = cols;
