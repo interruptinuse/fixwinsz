@@ -1,11 +1,3 @@
-#ifndef DEFAULT_COLS
-# define DEFAULT_COLS 80
-#endif /* DEFAULT_COLS */
-
-#ifndef DEFAULT_ROWS
-# define DEFAULT_ROWS 25
-#endif /* DEFAULT_ROWS */
-
 #ifndef COLS_ENV
 # define COLS_ENV "WINSZ_COLS"
 #endif /* COLS_ENV */
@@ -41,23 +33,17 @@ int ioctl(int d, unsigned long rq, char *argp) {
   if(rq == TIOCGWINSZ) {
 #define WS_COL (((struct winsize*)argp)->ws_col)
 #define WS_ROW (((struct winsize*)argp)->ws_row)
-    char *cols_env = getenv(COLS_ENV);
-    errno = 0;
-    int cols = cols_env != NULL ? strtol(cols_env, NULL, 0) : 0;
-    if(errno) cols = 0;
-
-    char *rows_env = getenv(ROWS_ENV);
-    errno = 0;
-    int rows = rows_env != NULL ? strtol(rows_env, NULL, 0) : 0;
-    if(errno) rows = 0;
-
-    if(cols > 0 && WS_COL > cols) {
-      WS_COL = cols;
-    }
-
-    if(rows > 0 && WS_ROW > rows) {
-      WS_ROW = rows;
-    }
+#define SET(ev,es,v,w) do{                      \
+  char *ev = getenv(es);                        \
+  errno = 0;                                    \
+  int v = ev != NULL ? strtol(ev, NULL, 0) : 0; \
+  if(errno) v = 0;                              \
+  if(v > 0 && w > v) {                          \
+    w = v;                                      \
+  }                                             \
+}while(0)
+    SET(cols_env, COLS_ENV, cols, WS_COL);
+    SET(rows_env, ROWS_ENV, rows, WS_ROW);
   }
 
   return retcode;
