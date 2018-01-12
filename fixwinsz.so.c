@@ -41,7 +41,6 @@ int ioctl(int d, unsigned long rq, char *argp) {
   if(rq == TIOCGWINSZ) {
 #define WS_COL (((struct winsize*)argp)->ws_col)
 #define WS_ROW (((struct winsize*)argp)->ws_row)
-
     char *cols_env = getenv(COLS_ENV);
     errno = 0;
     int cols = cols_env != NULL ? strtol(cols_env, NULL, 0) : 0;

@@ -14,8 +14,8 @@ clean:
 	rm -f fixwinsz.so fixwinsz.so.o get-tiocgwinsz
 
 install: fixwinsz.so
-	install -m0644 fixwinsz.so "${PREFIX}/lib"
 	install -m0644 fixwinsz.1  "${PREFIX}/share/man/man1"
+	install -m0644 fixwinsz.so "${PREFIX}/lib"
 	install        fixwinsz    "${PREFIX}/bin"
 
 .PHONY: clean install
