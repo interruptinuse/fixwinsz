@@ -9,24 +9,24 @@ GREP="${GREP-grep}"
 export GREP
 
 __error() {
-	echo "$MYSELF:" "$@" 1>&2
+  echo "$MYSELF:" "$@" 1>&2
 }
 
 if [ -z "$PREFIX" ]; then
-	if [ "$(id -u)" = 0 ]; then
-		PREFIX=/usr/local
-	else
-		PREFIX="$HOME/.local"
-	fi
+  if [ "$(id -u)" = 0 ]; then
+    PREFIX=/usr/local
+  else
+    PREFIX="$HOME/.local"
+  fi
 fi
 
 if [ -z "$FIXWINSZ_SO" ]; then
-	FIXWINSZ_SO="$PREFIX/lib/fixwinsz.so"
+  FIXWINSZ_SO="$PREFIX/lib/fixwinsz.so"
 fi
 
 if [ ! -e "$FIXWINSZ_SO" ]; then
-	__error "ERROR: fixwinsz library does not exist: $FIXWINSZ_SO"
-	exit 1
+  __error "ERROR: fixwinsz library does not exist: $FIXWINSZ_SO"
+  exit 1
 fi
 
 if [ "$(echo 'Grep test, should output "yes"' | "$GREP" -Po '(?<=")\w+(?="$)')" != "yes" ]; then
