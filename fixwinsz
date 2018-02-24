@@ -12,16 +12,14 @@ __error() {
   echo "$MYSELF:" "$@" 1>&2
 }
 
-if [ -z "$PREFIX" ]; then
-  if [ "$(id -u)" = 0 ]; then
-    PREFIX=/usr/local
-  else
-    PREFIX="$HOME/.local"
-  fi
-fi
-
 if [ -z "$FIXWINSZ_SO" ]; then
-  FIXWINSZ_SO="$PREFIX/lib/fixwinsz.so"
+  for PREFIX in $HOME/.local $HOME /usr/local /usr ; do
+    FIXWINSZ_SO_TMP="$PREFIX/lib/fixwinsz.so"
+
+    if [ -e "$FIXWINSZ_SO_TMP" ]; then
+      FIXWINSZ_SO="$FIXWINSZ_SO_TMP"
+    fi
+  done
 fi
 
 if [ ! -e "$FIXWINSZ_SO" ]; then
