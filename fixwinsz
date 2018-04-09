@@ -44,7 +44,7 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   # TODO: better parsing
   WINSZ_COLS="$(echo "$WINSZ" | "${GREP-grep}" -Po '^\d+')"
   WINSZ_ROWS="$(echo "$WINSZ" | "${GREP-grep}" -Po '(?<=\D)\d+$')"
-  LD_PRELOAD="$FIXWINSZ_SO"
+  LD_PRELOAD="$FIXWINSZ_SO $LD_PRELOAD"
   export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
   "$@"
 fi
