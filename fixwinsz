@@ -1,41 +1,52 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Usage: fixwinsz [WIDTH][xHEIGHT] COMMAND [ARGS...]
 # Restrict terminal size assumed by programs to WIDTHxHEIGHT.
 
-MYSELF="$(basename "$(readlink -f "$0")")"
-export MYSELF
-
-GREP="${GREP-grep}"
-export GREP
-
-__error() {
+unset -f __error
+__error() (
   echo "$MYSELF:" "$@" 1>&2
+)
+
+unset -f __die
+__die() {
+  __error "$@"
+  exit 1
 }
 
-if [ -z "$FIXWINSZ_SO" ]; then
-  for PREFIX in $HOME/.local $HOME /usr/local /usr ; do
-    FIXWINSZ_SO_TMP="$PREFIX/lib/fixwinsz.so"
+unset -f __check_pgrep
+__check_pgrep() (
+  [[ "$(echo 'Grep test, should output "yes"' \
+   | "${GREP-grep}" -Po '(?<=")\w+(?="$)')" == "yes" ]]
+)
 
-    if [ -e "$FIXWINSZ_SO_TMP" ]; then
-      FIXWINSZ_SO="$FIXWINSZ_SO_TMP"
-    fi
-  done
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+  MYSELF="$(basename "$(readlink -f "$0")")"
+  export MYSELF
+
+  if [[ -z $FIXWINSZ_SO ]]; then
+    for PREFIX in $HOME/.local $HOME /usr/local /usr ; do
+      FIXWINSZ_SO_TMP="$PREFIX/lib/fixwinsz.so"
+
+      if [[ -e $FIXWINSZ_SO_TMP ]]; then
+        FIXWINSZ_SO="$FIXWINSZ_SO_TMP"
+      fi
+    done
+  fi
+
+  if [[ ! -e $FIXWINSZ_SO ]]; then
+    __die "ERROR: fixwinsz library does not exist: $FIXWINSZ_SO"
+  fi
+
+  __check_pgrep || __die "ERROR: could not find suitable grep"
+
+  WINSZ="$1" ; shift 1
+
+  # TODO: better parsing
+  WINSZ_COLS="$(echo "$WINSZ" | "${GREP-grep}" -Po '^\d+')"
+  WINSZ_ROWS="$(echo "$WINSZ" | "${GREP-grep}" -Po '(?<=\D)\d+$')"
+  LD_PRELOAD="$FIXWINSZ_SO"
+  export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
+  "$@"
 fi
 
-if [ ! -e "$FIXWINSZ_SO" ]; then
-  __error "ERROR: fixwinsz library does not exist: $FIXWINSZ_SO"
-  exit 1
-fi
-
-if [ "$(echo 'Grep test, should output "yes"' | "$GREP" -Po '(?<=")\w+(?="$)')" != "yes" ]; then
-  __error "ERROR: could not find suitable grep"
-  exit 1
-fi
-
-WINSZ="$1" ; shift 1
-
-WINSZ_COLS="$(echo "$WINSZ" | "$GREP" -Po '^\d+')"
-WINSZ_ROWS="$(echo "$WINSZ" | "$GREP" -Po '(?<=\D)\d+$')"
-LD_PRELOAD="$FIXWINSZ_SO"
-export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
-"$@"
+# vim: et:sw=2
