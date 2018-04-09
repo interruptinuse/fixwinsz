@@ -1,6 +1,7 @@
 # Install to $HOME/.local or /usr/local.
 
 TAR = tar
+LS = ls
 VERSION = 0.03
 TARBALL = fixwinsz-v${VERSION}.tar.gz
 
@@ -23,7 +24,7 @@ install: fixwinsz.so
 	install -D        fixwinsz    "${PREFIX}/bin/"
 
 dist: clean
-	$(TAR) -cf - --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore --numeric-owner --transform="s:^.:fixwinsz-v${VERSION}:" . | gzip --best > ${TARBALL}
+	env LC_ALL=C $(LS) -AX1 | $(TAR) -cf - --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore --numeric-owner --transform="s:^:fixwinsz-v${VERSION}/:" -T- | gzip --best > ${TARBALL}
 	$(TAR) -tvzf ${TARBALL}
 
 .PHONY: clean install dist
