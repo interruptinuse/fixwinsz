@@ -17,28 +17,33 @@
 #include <dlfcn.h>
 #include <termios.h>
 
-struct winsize {
+struct winsize
+{
   unsigned short ws_row;
   unsigned short ws_col;
   unsigned short ws_xpixel;
   unsigned short ws_ypixel;
 };
 
-int ioctl(int d, unsigned long rq, char *argp) {
+int ioctl(int d, unsigned long rq, char *argp)
+{
   static int (*ioctl_real)(int d, unsigned long rq, char *argp) = 0;
   ioctl_real = dlsym(RTLD_NEXT, "ioctl");
 
   int retcode = ioctl_real(d, rq, argp);
 
-  if(rq == TIOCGWINSZ) {
+  if(rq == TIOCGWINSZ)
+  {
 #define WS_COL (((struct winsize*)argp)->ws_col)
 #define WS_ROW (((struct winsize*)argp)->ws_row)
-#define SET(ev,es,v,w) do{                      \
+#define SET(ev,es,v,w) do                       \
+{                                               \
   char *ev = getenv(es);                        \
   errno = 0;                                    \
   int v = ev != NULL ? strtol(ev, NULL, 0) : 0; \
   if(errno) v = 0;                              \
-  if(v > 0 && w > v) {                          \
+  if(v > 0 && w > v)                            \
+  {                                             \
     w = v;                                      \
   }                                             \
 }while(0)
