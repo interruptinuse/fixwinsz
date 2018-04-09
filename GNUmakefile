@@ -3,7 +3,7 @@
 TAR = tar
 LS = ls
 VERSION = 0.04
-TARBALL = fixwinsz-v${VERSION}.tar.gz
+TARBALL = fixwinsz-${VERSION}.tar.gz
 
 fixwinsz.so: fixwinsz.so.o
 	$(CC) -o $@ -shared -Wl,--no-as-needed $(CFLAGS) $< -ldl $(LDFLAGS)
@@ -24,7 +24,7 @@ install: fixwinsz.so
 	install -D        fixwinsz    "${PREFIX}/bin/"
 
 dist: clean
-	env LC_ALL=C $(LS) -AX1 | $(TAR) -cf - --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore --numeric-owner --transform="s:^:fixwinsz-v${VERSION}/:" -T- | gzip --best > ${TARBALL}
+	env LC_ALL=C $(LS) -AX1 | $(TAR) -cf - --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore --numeric-owner --transform="s:^:fixwinsz-${VERSION}/:" -T- | gzip --best > ${TARBALL}
 	$(TAR) -tvzf ${TARBALL}
 
 .PHONY: clean install dist
