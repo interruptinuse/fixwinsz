@@ -1,0 +1,3 @@
+fixwinsz.so
+fixwinsz.so.o
+get-tiocgwinsz
