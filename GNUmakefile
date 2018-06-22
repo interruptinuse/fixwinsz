@@ -27,7 +27,12 @@ install: fixwinsz.so
 	install -D        fixwinsz    "${PREFIX}/bin/"
 
 dist: clean fixwinsz.1.txt
-	env LC_ALL=C $(LS) -AX1 | $(TAR) -cf - --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore --numeric-owner --dereference --transform="s:^:fixwinsz-${VERSION}/:" -T- | gzip --best > ${TARBALL}
+	env LC_ALL=C $(LS) --group-directories-first -AX1 \
+	| $(TAR) -cf - \
+	  --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore \
+	  --numeric-owner --dereference --mtime="$(shell date -d 00:00)" \
+	  --transform="s:^:fixwinsz-${VERSION}/:" -T- \
+	| gzip --best --rsyncable > ${TARBALL}
 	$(TAR) -tvzf ${TARBALL}
 
 .PHONY: clean install dist
