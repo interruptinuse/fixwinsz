@@ -1,0 +1,17 @@
+v0.04 (2018-04-09)
+ CHANGED: Switch to bash
+ .editorconfig | 20 +++++++++
+ .gitignore    |  3 ++
+ GNUmakefile   | 25 +++++++----
+ fixwinsz      | 71 +++++++++++++++++-------------
+ fixwinsz.1    |  4 +-
+ 5 files changed, 83 insertions(+), 40 deletions(-)
+
+v0.03 (2018-02-24)
+ CHANGED: Better PREFIX detection for `lib/fixwinsz.so'.
+ fixwinsz   | 16 +++++++---------
+ fixwinsz.1 |  4 ++--
+ 2 files changed, 9 insertions(+), 11 deletions(-)
+
+v0.02 (2018-02-23)
+ Initial version.
