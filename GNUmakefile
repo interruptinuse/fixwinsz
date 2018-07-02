@@ -1,7 +1,7 @@
 # Install to $HOME/.local or /usr/local.
 
-TAR = tar
-LS = ls
+TAR     = tar
+LS      = ls
 VERSION = 0.04
 TARBALL = fixwinsz-${VERSION}.tar.gz
 
