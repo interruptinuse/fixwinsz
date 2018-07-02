@@ -2,7 +2,7 @@
 
 TAR     = tar
 LS      = ls
-VERSION = 0.04
+VERSION = 0.05
 TARBALL = fixwinsz-${VERSION}.tar.gz
 
 fixwinsz.so: fixwinsz.so.o
