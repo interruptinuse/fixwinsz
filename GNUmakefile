@@ -32,7 +32,7 @@ dist: clean fixwinsz.1.txt
 	  --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore \
 	  --numeric-owner --dereference --mtime="$(shell date -d 00:00)" \
 	  --transform="s:^:fixwinsz-${VERSION}/:" -T- \
-	| gzip --best --rsyncable > ${TARBALL}
+	| gzip --best --rsyncable --no-name > ${TARBALL}
 	$(TAR) -tvzf ${TARBALL}
 
 .PHONY: clean install dist
