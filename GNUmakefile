@@ -19,7 +19,7 @@ get-tiocgwinsz: get-tiocgwinsz.c
 	$(CC) -o $@ $(CFLAGS) $< $(LDFLAGS)
 
 clean:
-	rm -f fixwinsz.so fixwinsz.so.o fixwinsz.1.txt get-tiocgwinsz ${TARBALL}
+	rm -f fixwinsz.so fixwinsz.so.o get-tiocgwinsz ${TARBALL}
 
 install: fixwinsz.so
 	install -D -m0644 fixwinsz.1  "${PREFIX}/share/man/man1/"
