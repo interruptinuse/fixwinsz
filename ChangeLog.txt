@@ -2,29 +2,12 @@ v0.05 (2018-07-02)
  ADDED:   ChangeLog.txt
  ADDED:   fixwinsz.1.txt
  CHANGED: Allow user LD_PRELOAD
- .editorconfig    |  8 ++------
- ChangeLog.txt    | 30 ++++++++++++++++++++++++++++++
- GNUmakefile      | 22 +++++++++++++++-------
- fixwinsz         |  2 +-
- fixwinsz.1       |  6 +++---
- fixwinsz.so.c    | 15 ++++++++++-----
- get-tiocgwinsz.c |  3 ++-
- 7 files changed, 63 insertions(+), 23 deletions(-)
 
 v0.04 (2018-04-09)
  CHANGED: Switch to bash
- .editorconfig | 20 +++++++++
- .gitignore    |  3 ++
- GNUmakefile   | 25 +++++++----
- fixwinsz      | 71 +++++++++++++++++-------------
- fixwinsz.1    |  4 +-
- 5 files changed, 83 insertions(+), 40 deletions(-)
 
 v0.03 (2018-02-24)
  CHANGED: Better PREFIX detection for `lib/fixwinsz.so'.
- fixwinsz   | 16 +++++++---------
- fixwinsz.1 |  4 ++--
- 2 files changed, 9 insertions(+), 11 deletions(-)
 
 v0.02 (2018-02-23)
  Initial version.
