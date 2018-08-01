@@ -34,21 +34,20 @@ int ioctl(int d, unsigned long rq, char *argp)
 
   if(rq == TIOCGWINSZ)
   {
-#define WS_COL (((struct winsize*)argp)->ws_col)
-#define WS_ROW (((struct winsize*)argp)->ws_row)
+#define WS(x) (((struct winsize*)argp)->x)
 #define SET(ev,es,v,w) do                       \
 {                                               \
   char *ev = getenv(es);                        \
   errno = 0;                                    \
   int v = ev != NULL ? strtol(ev, NULL, 0) : 0; \
   if(errno) v = 0;                              \
-  if(v > 0 && w > v)                            \
+  if(v > 0 && WS(w) > v)                        \
   {                                             \
-    w = v;                                      \
+    WS(w) = v;                                  \
   }                                             \
 }while(0)
-    SET(cols_env, COLS_ENV, cols, WS_COL);
-    SET(rows_env, ROWS_ENV, rows, WS_ROW);
+    SET(cols_env, COLS_ENV, cols, ws_col);
+    SET(rows_env, ROWS_ENV, rows, ws_row);
   }
 
   return retcode;
