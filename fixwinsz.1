@@ -13,7 +13,7 @@
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .B "fixwinsz"
-.I "[WIDTH][xHEIGHT] COMMAND [ARGS]..."
+[\fIWIDTH\fR][\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]..."
 
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -25,8 +25,7 @@ calls.  If a given ioctl is
 which is the method that Linux programs use to get the size of the parent
 terminal in columns and rows,
 .IR fixwinsz (1)
-will limit the returned area size to
-.IR WIDTHxHEIGHT .
+will limit the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
 
 .SH BUGS
 .IX Header "BUGS"
