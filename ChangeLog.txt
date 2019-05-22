@@ -1,3 +1,7 @@
+v0.06 (2019-05-22)
+ ADDED:   (make) LIBDIR and BINDIR overrides
+ FIXED:   (make) install now creates directories correctly
+
 v0.05 (2018-07-02)
  ADDED:   ChangeLog.txt
  ADDED:   fixwinsz.1.txt

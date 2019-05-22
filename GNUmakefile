@@ -2,8 +2,11 @@
 
 TAR     = tar
 LS      = ls
-VERSION = 0.05
+VERSION = 0.06
 TARBALL = fixwinsz-$(VERSION).tar
+LIBDIR  = $(PREFIX)/lib
+BINDIR  = $(PREFIX)/bin
+
 
 fixwinsz.so: fixwinsz.so.o
 	$(CC) -o $@ -shared -Wl,--no-as-needed $(CFLAGS) $< -ldl $(LDFLAGS)
@@ -22,10 +25,10 @@ clean:
 	rm -f $(shell cat .gitignore) $(TARBALL) $(TARBALL).gz
 
 install: fixwinsz.so
-	install -D -m0644 fixwinsz.1  "$(PREFIX)/share/man/man1/"
-	gzip --best                   "$(PREFIX)/share/man/man1/fixwinsz.1"
-	install -D -m0644 fixwinsz.so "$(PREFIX)/lib/"
-	install -D        fixwinsz    "$(PREFIX)/bin/"
+	install -D -m0644 -t "$(PREFIX)/share/man/man1/"  fixwinsz.1
+	gzip --best          "$(PREFIX)/share/man/man1/fixwinsz.1"
+	install -D -m0644 -t "$(LIBDIR)/"                 fixwinsz.so
+	install -D        -t "$(BINDIR)/"                 fixwinsz
 
 dist: clean fixwinsz.1.txt
 	env LC_ALL=C $(LS) --group-directories-first -AX1 \
