@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: fixwinsz [WIDTH][xHEIGHT] COMMAND [ARGS...]
+# Usage: fixwinsz WIDTH[xHEIGHT] COMMAND [ARGS...]
 # Restrict terminal size assumed by programs to WIDTHxHEIGHT.
 
 unset -f __error
@@ -44,6 +44,11 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   # TODO: better parsing
   WINSZ_COLS="$(echo "$WINSZ" | "${GREP-grep}" -Po '^\d+')"
   WINSZ_ROWS="$(echo "$WINSZ" | "${GREP-grep}" -Po '(?<=\D)\d+$')"
+
+  if [[ -z $WINSZ_COLS ]]; then
+    __die "ERROR: WIDTH not specified, see fixwinsz(1)"
+  fi
+
   LD_PRELOAD="$FIXWINSZ_SO $LD_PRELOAD"
   export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
   "$@"

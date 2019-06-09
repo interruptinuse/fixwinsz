@@ -1,3 +1,6 @@
+v0.07 (2019-06-09)
+ FIXED:   WIDTH is now properly considered mandatory
+
 v0.06 (2019-05-22)
  ADDED:   (make) LIBDIR and BINDIR overrides
  FIXED:   (make) install now creates directories correctly

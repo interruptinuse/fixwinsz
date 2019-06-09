@@ -1,9 +1,9 @@
 .\"
-.Dd May 22, 2018
+.Dd June 09, 2018
 .Os
 .Dt FIXWINSZ 1
 .IX Title "FIXWINSZ 1"
-.TH FIXWINSZ 1 "2019-05-23" "fixwinsz 0.06" "Restrict terminal size assumed by programs"
+.TH FIXWINSZ 1 "2019-06-09" "fixwinsz 0.07" "Restrict terminal size assumed by programs"
 
 .SH "NAME"
 .IX Header "NAME"
@@ -13,7 +13,7 @@
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .B "fixwinsz"
-[\fIWIDTH\fR][\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]..."
+\fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]..."
 
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
@@ -26,6 +26,7 @@ which is the method that Linux programs use to get the size of the parent
 terminal in columns and rows,
 .IR fixwinsz (1)
 will limit the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
+(If \fIHEIGHT\fR has not been specified, it is kept unchanged.)
 
 .SH BUGS
 .IX Header "BUGS"
