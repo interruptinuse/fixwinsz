@@ -41,7 +41,7 @@ void setdim(const char *envvar, unsigned short *v)
 int ioctl(int d, unsigned long rq, char *argp)
 {
   static int (*ioctl_real)(int d, unsigned long rq, char *argp) = 0;
-  ioctl_real = dlsym(RTLD_NEXT, "ioctl");
+  ioctl_real = (int(*)(int,unsigned long,char*))dlsym(RTLD_NEXT, "ioctl");
 
   int retcode = ioctl_real(d, rq, argp);
 
