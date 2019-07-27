@@ -25,6 +25,7 @@ clean:
 	rm -f $(shell cat .gitignore) $(TARBALL) $(TARBALL).gz
 
 install: fixwinsz.so
+	$(if $(PREFIX),,$(error PREFIX not defined (try $$HOME/.local or /usr/local)))
 	install -D -m0644 -t "$(PREFIX)/share/man/man1/"  fixwinsz.1
 	gzip --best          "$(PREFIX)/share/man/man1/fixwinsz.1"
 	install -D -m0644 -t "$(LIBDIR)/"                 fixwinsz.so
