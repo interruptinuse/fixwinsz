@@ -25,6 +25,19 @@ struct winsize
   unsigned short ws_ypixel;
 };
 
+void setdim(const char *envvar, unsigned short *v)
+{
+  char *ev = getenv(envvar);
+  errno = 0;
+  unsigned short arg = ev != NULL ? (unsigned short)strtol(ev, NULL, 0) : 0;
+
+  if(errno)
+    arg = 0;
+
+  if(arg > 0 && *v > arg)
+    *v = arg;
+}
+
 int ioctl(int d, unsigned long rq, char *argp)
 {
   static int (*ioctl_real)(int d, unsigned long rq, char *argp) = 0;
@@ -34,20 +47,12 @@ int ioctl(int d, unsigned long rq, char *argp)
 
   if(rq == TIOCGWINSZ)
   {
-#define WS(x) (((struct winsize*)argp)->x)
-#define SET(ev,es,v,w) do                       \
-{                                               \
-  char *ev = getenv(es);                        \
-  errno = 0;                                    \
-  int v = ev != NULL ? strtol(ev, NULL, 0) : 0; \
-  if(errno) v = 0;                              \
-  if(v > 0 && WS(w) > v)                        \
-  {                                             \
-    WS(w) = v;                                  \
-  }                                             \
-}while(0)
-    SET(cols_env, COLS_ENV, cols, ws_col);
-    SET(rows_env, ROWS_ENV, rows, ws_row);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+    // We cannot guarantee that the ioctl receives aligned data, so don't warn.
+    setdim(COLS_ENV, &((struct winsize*)argp)->ws_col);
+    setdim(ROWS_ENV, &((struct winsize*)argp)->ws_row);
+#pragma GCC diagnostic pop
   }
 
   return retcode;
