@@ -1,9 +1,9 @@
 .\"
-.Dd June 09, 2018
+.Dd July 27, 2018
 .Os
 .Dt FIXWINSZ 1
 .IX Title "FIXWINSZ 1"
-.TH FIXWINSZ 1 "2019-06-09" "fixwinsz 0.07" "Restrict terminal size assumed by programs"
+.TH FIXWINSZ 1 "2019-07-27" "fixwinsz 0.07" "Restrict terminal size assumed by programs"
 
 .SH "NAME"
 .IX Header "NAME"
@@ -13,20 +13,18 @@
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .B "fixwinsz"
-\fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]..."
+\fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]...
 
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 .IR fixwinsz (1)
-is an LD_PRELOAD wrapper which hooks
-.IR ioctl (2)
-calls.  If a given ioctl is
-.BR TIOCGWINSZ ,
+is an LD_PRELOAD wrapper which intercepts the
+.BR TIOCGWINSZ
+.IR ioctl (2),
 which is the method that Linux programs use to get the size of the parent
-terminal in columns and rows,
-.IR fixwinsz (1)
-will limit the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
-(If \fIHEIGHT\fR has not been specified, it is kept unchanged.)
+terminal, and limits the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
+(If \fIHEIGHT\fR has not been specified, it is kept unchanged.  \fIWIDTH\fR
+is required.)
 
 .SH BUGS
 .IX Header "BUGS"
