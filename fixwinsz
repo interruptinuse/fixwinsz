@@ -51,9 +51,17 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
     __die "ERROR: WIDTH not specified, see fixwinsz(1)"
   fi
 
+  REAL_LINES="$(tput lines)"
+
   LD_PRELOAD="$FIXWINSZ_SO $LD_PRELOAD"
   export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
   "$@"
+
+  # If we're hooking a curses app, it will send the DECSTBM control code
+  # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
+  # which will persist in the terminal.  This bug is noticeable in zsh.
+  # Hence, we need to reset to the real height.
+  printf '\033[1;%sr' "$REAL_LINES"
 fi
 
 # vim: et:sw=2
