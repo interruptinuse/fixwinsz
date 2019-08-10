@@ -1,0 +1,8 @@
+  fixwinsz(1): restrict terminal size assumed by programs
+=========================================================
+
+  Usage: fixwinsz WIDTH[xHEIGHT] COMMAND [ARGS]...
+  Limit the terminal size reported by the TIOCGWINSZ ioctl to WIDTH.  If HEIGHT
+  is not specified, it's unchanged.
+
+  This is a Linux-only script.
