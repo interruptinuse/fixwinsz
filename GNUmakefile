@@ -2,7 +2,7 @@
 
 TAR     = tar
 LS      = ls
-VERSION = 0.07
+VERSION = 0.08
 TARBALL = fixwinsz-$(VERSION).tar
 LIBDIR  = $(PREFIX)/lib
 BINDIR  = $(PREFIX)/bin
