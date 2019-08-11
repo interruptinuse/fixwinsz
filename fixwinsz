@@ -56,12 +56,15 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   LD_PRELOAD="$FIXWINSZ_SO $LD_PRELOAD"
   export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
   "$@"
+  RC="$?"
 
   # If we're hooking a curses app, it will send the DECSTBM control code
   # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
   # which will persist in the terminal.  This bug is noticeable in zsh.
   # Hence, we need to reset to the real height (the terminfo cap name is csr).
   tput csr 0 "$((REAL_LINES-1))"
+
+  exit "$RC"
 fi
 
 # vim: et:sw=2
