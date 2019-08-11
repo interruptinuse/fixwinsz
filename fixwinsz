@@ -60,8 +60,8 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   # If we're hooking a curses app, it will send the DECSTBM control code
   # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
   # which will persist in the terminal.  This bug is noticeable in zsh.
-  # Hence, we need to reset to the real height.
-  printf '\033[1;%sr' "$REAL_LINES"
+  # Hence, we need to reset to the real height (the terminfo cap name is csr).
+  tput csr 0 "$((REAL_LINES-1))"
 fi
 
 # vim: et:sw=2
