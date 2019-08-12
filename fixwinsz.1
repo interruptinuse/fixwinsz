@@ -1,9 +1,9 @@
 .\"
-.Dd August 10, 2018
+.Dd August 12, 2018
 .Os
 .Dt FIXWINSZ 1
 .IX Title "FIXWINSZ 1"
-.TH FIXWINSZ 1 "2019-08-10" "fixwinsz 0.08" "Restrict terminal size assumed by programs"
+.TH FIXWINSZ 1 "2019-08-12" "fixwinsz 0.08" "Restrict terminal size assumed by programs"
 
 .SH "NAME"
 .IX Header "NAME"
@@ -25,6 +25,16 @@ which is the method that Linux programs use to get the size of the parent
 terminal, and limits the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
 (If \fIHEIGHT\fR has not been specified, it is kept unchanged.  \fIWIDTH\fR
 is required.)
+
+.SH "OPTIONS"
+.IX Header "OPTIONS"
+.TP
+\fB-s\fR
+Always restore the scroll region (\(lqtput csr\(rq) after \fBCOMMAND\fR exits.
+The default is to guess based on whether \fBCOMMAND\fR links the curses library.
+.TP
+\fB-S\fR
+Never restore the scroll region.
 
 .SH RATIONALE
 .IX Header "RATIONALE"

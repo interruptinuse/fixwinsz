@@ -63,6 +63,31 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
 
   __check_pgrep || __die "ERROR: could not find suitable grep"
 
+  RESTORE_SR=
+
+  while getopts :sS OPTION ; do
+    case "${OPTION}" in
+      s)
+        RESTORE_SR=always
+        ;;
+      S)
+        RESTORE_SR=never
+        ;;
+      default)
+        ;;
+      \?)
+        __die "ERROR: Unknown option: -${OPTARG}"
+        ;;
+      :)
+        __die "ERROR: Argument missing for option: -${OPTARG}"
+        ;;
+      *)
+        __die "ERROR: Unknown getopts failure"
+        ;;
+    esac
+  done
+  shift "$((OPTIND-1))"
+
   WINSZ="$1" ; shift 1
 
   # TODO: better parsing
@@ -80,13 +105,20 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   "$@"
   RC="$?"
 
-  if __is_tui_app "$1" ; then
-    # If we're hooking a curses app, it will send the DECSTBM control code
-    # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
-    # which will persist in the terminal.  This bug is noticeable in zsh.
-    # Hence, we need to reset to the real height (the terminfo cap name is csr).
-    tput csr 0 "$((REAL_LINES-1))"
-  fi
+  # If we're hooking a curses app, it will send the DECSTBM control code,
+  # aka the csr termcap, "change scroll region", (ESC [ 1 ; HEIGHT r) with our
+  # fake HEIGHT, which will persist in the terminal.
+  # Hence, we need to reset to the real height.
+  case "${RESTORE_SR}" in
+    always)
+      tput csr 0 "$((REAL_LINES-1))"
+      ;;
+    never)
+      ;;
+    *)
+      __is_tui_app "$1" && tput csr 0 "$((REAL_LINES-1))"
+      ;;
+  esac
 
   exit "$RC"
 fi
