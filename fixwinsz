@@ -21,6 +21,28 @@ __check_pgrep() (
    | "${GREP-grep}" -Po '(?<=")\w+(?="$)')" == "yes" ]]
 )
 
+# Aside from intercepting the output and looking for the csr ESC code,
+# we can only guess if the app is going to set the scroll region.
+# Probably the best way to do it is to look for the curses library (or, in case
+# of neovim, libvterm).
+unset -f __is_tui_app
+__is_tui_app() (
+  local PROGRAM="$1" ; shift 1
+  PROGRAM="$(command -v "$PROGRAM")"
+
+  if ! ldd "$PROGRAM" 1>/dev/null 2>/dev/null ; then
+    # Not a dynamic executable, behave conservatively
+    return 0 # true
+  fi
+
+  if [[ $(ldd "$PROGRAM" 2>/dev/null \
+        | "${GREP-grep}" -Pc '(libn?curses|libvterm)') != 0 ]]; then
+    return 0 # true
+  fi
+
+  return 1 # false
+)
+
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   MYSELF="$(basename "$(readlink -f "$0")")"
   export MYSELF
@@ -58,11 +80,13 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
   "$@"
   RC="$?"
 
-  # If we're hooking a curses app, it will send the DECSTBM control code
-  # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
-  # which will persist in the terminal.  This bug is noticeable in zsh.
-  # Hence, we need to reset to the real height (the terminfo cap name is csr).
-  tput csr 0 "$((REAL_LINES-1))"
+  if __is_tui_app "$1" ; then
+    # If we're hooking a curses app, it will send the DECSTBM control code
+    # ("Set Top and Bottom [scrolling] Margins" ( ESC[1;HEIGHTr) with our HEIGHT,
+    # which will persist in the terminal.  This bug is noticeable in zsh.
+    # Hence, we need to reset to the real height (the terminfo cap name is csr).
+    tput csr 0 "$((REAL_LINES-1))"
+  fi
 
   exit "$RC"
 fi
