@@ -9,6 +9,9 @@ trim_trailing_whitespace = true
 indent_size              = 2
 indent_style             = space
 
+[fixwinsz]
+indent_size = 4
+
 [GNUmakefile]
 indent_size  = 8
 indent_style = tab

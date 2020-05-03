@@ -1,3 +1,7 @@
+v0.10 (2020-05-04)
+ CHANGED: Rewrite in Python, use forkpty(3)
+ REMOVED: -s/-S (scroll region is not handled anymore)
+
 v0.09 (2019-08-12)
  ADDED:   -s/-S (always/never restore the scroll region)
  FIXED:   by default, only restore scroll region if TUI

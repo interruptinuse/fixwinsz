@@ -2,34 +2,24 @@
 
 TAR     = tar
 LS      = ls
-VERSION = 0.09
+GZIP    = gzip
+VERSION = 0.10
 TARBALL = fixwinsz-$(VERSION).tar
-LIBDIR  = $(PREFIX)/lib
 BINDIR  = $(PREFIX)/bin
 
+fixwinsz:
 
-fixwinsz.so: fixwinsz.so.o
-	$(CC) -o $@ -shared -Wl,--no-as-needed $(CFLAGS) $< -ldl $(LDFLAGS)
-
-fixwinsz.so.o: fixwinsz.so.c get-tiocgwinsz
-	$(eval TIOCGWINSZ := $(shell ./get-tiocgwinsz))
-	$(CC) -c -o $@ -DTIOCGWINSZ=$(TIOCGWINSZ) -fpic $(CFLAGS) $< $(LDFLAGS)
+install: fixwinsz
+	$(if $(PREFIX),,$(error PREFIX not defined (try $$HOME/.local or /usr/local)))
+	install -D -m0644 -t "$(PREFIX)/share/man/man1/" fixwinsz.1
+	gzip --force --best "$(PREFIX)/share/man/man1/fixwinsz.1"
+	install -D -t "$(BINDIR)/" fixwinsz
 
 fixwinsz.1.txt: fixwinsz.1
 	env LC_ALL=C MANWIDTH=80 man --nh -P cat "$(shell readlink -e $^)" > $@
 
-get-tiocgwinsz: get-tiocgwinsz.c
-	$(CC) -o $@ $(CFLAGS) $< $(LDFLAGS)
-
 clean:
 	rm -f $(shell cat .gitignore) $(TARBALL) $(TARBALL).gz
-
-install: fixwinsz.so
-	$(if $(PREFIX),,$(error PREFIX not defined (try $$HOME/.local or /usr/local)))
-	install -D -m0644 -t "$(PREFIX)/share/man/man1/"  fixwinsz.1
-	gzip --best          "$(PREFIX)/share/man/man1/fixwinsz.1"
-	install -D -m0644 -t "$(LIBDIR)/"                 fixwinsz.so
-	install -D        -t "$(BINDIR)/"                 fixwinsz
 
 dist: clean fixwinsz.1.txt
 	env LC_ALL=C TZ=UTC $(LS) --group-directories-first -AX1 \

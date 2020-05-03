@@ -2,7 +2,5 @@
 =========================================================
 
   Usage: fixwinsz WIDTH[xHEIGHT] COMMAND [ARGS]...
-  Limit the terminal size reported by the TIOCGWINSZ ioctl to WIDTH.  If HEIGHT
+  Launch COMMAND in a pty(7) limited by the WIDTH[xHEIGHT] size.  If HEIGHT
   is not specified, it's unchanged.
-
-  This is a Linux-only script.

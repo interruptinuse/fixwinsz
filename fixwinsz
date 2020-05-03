@@ -1,124 +1,167 @@
-#!/usr/bin/env bash
-# Usage: fixwinsz WIDTH[xHEIGHT] COMMAND [ARGS...]
-# Restrict terminal size assumed by programs to WIDTHxHEIGHT.
+#!/usr/bin/env python
+# Usage: fixwinsz WIDTH[xHEIGHT] [--] COMMAND [ARGS]...
+# Run COMMAND in a pty restricted to WIDTHxHEIGHT dimensions.
+#
+# XXX: snoop and apply/emulate DECSTBM/CSR?
 
-unset -f __error
-__error() (
-  echo "$MYSELF:" "$@" 1>&2
-)
+import os
+import sys
+import pty
+import re
+import time
+import argparse
+import struct
+import fcntl
+import errno
+import ctypes
+import ctypes.util
+import termios
 
-unset -f __die
-__die() {
-  __error "$@"
-  exit 1
-}
 
-unset -f __check_pgrep
-# A parse bug in shellcheck, apparently.
-# shellcheck disable=SC2234
-__check_pgrep() (
-  [[ "$(echo 'Grep test, should output "yes"' \
-   | "${GREP-grep}" -Po '(?<=")\w+(?="$)')" == "yes" ]]
-)
+def getwinsz(fd: int = sys.stdout.fileno()):
+    """
+    Return size (LINES, COLUMNS) of the tty associated with the descriptor.
+    """
+    s = struct.pack('HHHH', 0, 0, 0, 0)
+    s = struct.unpack('HHHH', fcntl.ioctl(fd, termios.TIOCGWINSZ, s))
+    return (s[0], s[1])
 
-# Aside from intercepting the output and looking for the csr ESC code,
-# we can only guess if the app is going to set the scroll region.
-# Probably the best way to do it is to look for the curses library (or, in case
-# of neovim, libvterm).
-unset -f __is_tui_app
-__is_tui_app() (
-  local PROGRAM="$1" ; shift 1
-  PROGRAM="$(command -v "$PROGRAM")"
 
-  if ! ldd "$PROGRAM" 1>/dev/null 2>/dev/null ; then
-    # Not a dynamic executable, behave conservatively
-    return 0 # true
-  fi
+def forkpty(width: int, height: int):
+    """
+    Return (pid, master, name)
+    """
+    class winsize(ctypes.Structure):
+        _fields_ = [
+            ('ws_row', ctypes.c_ushort),
+            ('ws_col', ctypes.c_ushort),
+            ('ws_xpixel', ctypes.c_ushort),
+            ('ws_ypixel', ctypes.c_ushort)
+        ]
 
-  if [[ $(ldd "$PROGRAM" 2>/dev/null \
-        | "${GREP-grep}" -Pc '(libn?curses|libvterm)') != 0 ]]; then
-    return 0 # true
-  fi
+    max_ushort = 2 ** (ctypes.sizeof(ctypes.c_ushort) * 8) - 1
 
-  return 1 # false
-)
+    if (not isinstance(width, int)):
+        raise ValueError("width is not an int")
+    if width < 0 or width > max_ushort:
+        raise ValueError("width overflows unsigned short")
+    if (not isinstance(height, int)):
+        raise ValueError("width is not an int")
+    if height < 0 or height > max_ushort:
+        raise ValueError("height overflows unsigned short")
 
-if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
-  MYSELF="$(basename "$(readlink -f "$0")")"
-  export MYSELF
+    libutil = ctypes.CDLL(ctypes.util.find_library('util'))
+    _forkpty = libutil.forkpty
+    _forkpty.restype = ctypes.c_int
+    _forkpty.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.c_char_p,
+        ctypes.c_char_p, # Don't use the termios arg
+        ctypes.POINTER(winsize)
+    ]
 
-  if [[ -z $FIXWINSZ_SO ]]; then
-    for PREFIX in $HOME/.local $HOME /usr/local /usr ; do
-      FIXWINSZ_SO_TMP="$PREFIX/lib/fixwinsz.so"
+    ws = winsize()
+    ws.ws_col = ctypes.c_ushort(width)
+    ws.ws_row = ctypes.c_ushort(height)
+    ws.xpixel = ctypes.c_ushort(0)
+    ws.ypixel = ctypes.c_ushort(0)
+    master = ctypes.c_int()
+    name = ctypes.create_string_buffer(1024)
 
-      if [[ -e $FIXWINSZ_SO_TMP ]]; then
-        FIXWINSZ_SO="$FIXWINSZ_SO_TMP"
-      fi
-    done
-  fi
+    pid = _forkpty(master, name, None, ws)
+    return (pid, master.value, name.value)
 
-  if [[ ! -e $FIXWINSZ_SO ]]; then
-    __die "ERROR: fixwinsz library does not exist: $FIXWINSZ_SO"
-  fi
 
-  __check_pgrep || __die "ERROR: could not find suitable grep"
+if __name__ == '__main__':
+    class Formatter(argparse.HelpFormatter):
+        def _format_usage(self, usage, actions, groups, prefix):
+            if prefix is None:
+                prefix = 'Usage: '
+            return super()._format_usage(usage, actions, groups, prefix).rstrip() + "\n"
 
-  RESTORE_SR=
+    a = argparse.ArgumentParser(
+        description='Launch command in a resized pty.',
+        usage='fixwinsz WIDTH[xHEIGHT] [--] COMMAND...',
+        formatter_class=Formatter,
+        add_help=False)
+    a.add_argument('dim', metavar='DIM', type=str, help=argparse.SUPPRESS)
+    a.add_argument('--help', action='help', help=argparse.SUPPRESS)
+    a.add_argument('--version', action='version', version="%(prog)s 0.10", help=argparse.SUPPRESS)
+    (args, cmd) = a.parse_known_args()
+    dim = args.dim.strip()
 
-  while getopts :sS OPTION ; do
-    case "${OPTION}" in
-      s)
-        RESTORE_SR=always
-        ;;
-      S)
-        RESTORE_SR=never
-        ;;
-      \?)
-        __die "ERROR: Unknown option: -${OPTARG}"
-        ;;
-      :)
-        __die "ERROR: Argument missing for option: -${OPTARG}"
-        ;;
-      *)
-        __die "ERROR: Unknown getopts failure"
-        ;;
-    esac
-  done
-  shift "$((OPTIND-1))"
+    try:
+        d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
+    except:
+        sys.stderr.write("fixwinsz: Incorrect tty size format: {}\n".format(repr(dim)))
+        sys.exit(1)
 
-  WINSZ="$1" ; shift 1
+    ph, pw = getwinsz()
 
-  # TODO: better parsing
-  WINSZ_COLS="$(echo "$WINSZ" | "${GREP-grep}" -Po '^\d+')"
-  WINSZ_ROWS="$(echo "$WINSZ" | "${GREP-grep}" -Po '(?<=\D)\d+$')"
+    locals().update(d)
+    width = int(width)
+    height = int(height) if height else ph
 
-  if [[ -z $WINSZ_COLS ]]; then
-    __die "ERROR: WIDTH not specified, see fixwinsz(1)"
-  fi
+    if width <= 0 or height <= 0:
+        sys.stderr.write("fixwinsz: Incorrect tty size: {}x{}\n".format(width, height))
+        sys.exit(1)
 
-  REAL_LINES="$(tput lines)"
+    (eread, ewrite) = os.pipe2(os.O_NONBLOCK)
+    (pid, master, name) = forkpty(width, height)
 
-  LD_PRELOAD="$FIXWINSZ_SO $LD_PRELOAD"
-  export WINSZ_COLS WINSZ_ROWS LD_PRELOAD
-  "$@"
-  RC="$?"
+    os.set_inheritable(eread, True)
+    os.set_inheritable(ewrite, True)
+    os.set_inheritable(master, True)
 
-  # If we're hooking a curses app, it will send the DECSTBM control code,
-  # aka the csr termcap, "change scroll region", (ESC [ 1 ; HEIGHT r) with our
-  # fake HEIGHT, which will persist in the terminal.
-  # Hence, we need to reset to the real height.
-  case "${RESTORE_SR}" in
-    always)
-      tput csr 0 "$((REAL_LINES-1))"
-      ;;
-    never)
-      ;;
-    *)
-      __is_tui_app "$1" && tput csr 0 "$((REAL_LINES-1))"
-      ;;
-  esac
+    if pid == 0:
+        os.dup2(ewrite, sys.stderr.fileno())
+        os.execvp(cmd[0], cmd)
+    else:
+        os.set_inheritable(master, True)
+        os.set_inheritable(eread, True)
 
-  exit "$RC"
-fi
+        if os.fork():
+            sys.stdin.close()
+            sys.stdout.close()
+            (wpid, wstatus) = os.waitpid(pid, 0)
+            if wpid:
+                rc = os.WEXITSTATUS(wstatus) if os.WIFEXITED(wstatus) else 1
+                sys.exit(rc)
+        else:
+            flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL, 0)
+            fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            flags = fcntl.fcntl(master, fcntl.F_GETFL, 0)
+            fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-# vim: et:sw=2
+            tios = termios.tcgetattr(sys.stdin.fileno())
+            tios_lflag = tios[3]
+            tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
+
+            while True:
+                try:
+                    data = os.read(master, 1024)
+                    os.write(sys.stdout.fileno(), data)
+                except BlockingIOError:
+                    pass
+                except OSError:
+                    break
+
+                try:
+                    data = os.read(sys.stdin.fileno(), 1024)
+                    os.write(master, data)
+                except BlockingIOError:
+                    pass
+                except OSError:
+                    break
+
+                try:
+                    data = os.read(eread, 1024)
+                    os.write(sys.stderr.fileno(), data)
+                except BlockingIOError:
+                    pass
+                except OSError:
+                    break
+
+            tios[3] = tios_lflag
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)

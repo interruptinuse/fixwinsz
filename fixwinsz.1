@@ -1,9 +1,9 @@
 .\"
-.Dd August 12, 2018
+.Dd May 04, 2020
 .Os
 .Dt FIXWINSZ 1
 .IX Title "FIXWINSZ 1"
-.TH FIXWINSZ 1 "2019-08-12" "fixwinsz 0.09" "Restrict terminal size assumed by programs"
+.TH FIXWINSZ 1 "2020-05-04" "fixwinsz 0.10" "Restrict terminal size assumed by programs"
 
 .SH "NAME"
 .IX Header "NAME"
@@ -13,41 +13,36 @@
 .SH "SYNOPSIS"
 .IX Header "SYNOPSIS"
 .B "fixwinsz"
-\fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] \fICOMMAND\fR [\fIARGS\fR]...
+\fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] [\fB--\fR] \fICOMMAND\fR [\fIARGS\fR]...
 
 .SH "DESCRIPTION"
 .IX Header "DESCRIPTION"
 .IR fixwinsz (1)
-is an LD_PRELOAD wrapper which intercepts the
-.BR TIOCGWINSZ
-.IR ioctl (2),
-which is the method that Linux programs use to get the size of the parent
-terminal, and limits the returned area size to \fIWIDTH\fRx\fIHEIGHT\fR.
-(If \fIHEIGHT\fR has not been specified, it is kept unchanged.  \fIWIDTH\fR
-is required.)
+is a
+.IR pty (7)
+wrapper which limits the child terminal size to \fIWIDTH\fRx\fIHEIGHT\fR.
+If \fIHEIGHT\fR has not been specified, it is kept unchanged.  \fIWIDTH\fR is
+required.
 
-.SH "OPTIONS"
-.IX Header "OPTIONS"
-.TP
-\fB-s\fR
-Always restore the scroll region (\(lqtput csr\(rq) after \fBCOMMAND\fR exits.
-The default is to guess based on whether \fBCOMMAND\fR links the curses library.
-.TP
-\fB-S\fR
-Never restore the scroll region.
+.SH "BUGS"
+.IX Header "BUGS"
+.nr step 1 1
+.IP \n[step] 4
+Does not emulate the DECSTBM\fI[1][2]\fR ANSI control code.
+Programs that rely on it, e.g.
+.IR less (1),
+will mangle the output.
 
-.SH RATIONALE
-.IX Header "RATIONALE"
-.IR fixwinsz (1)
-was created to non-invasively force
-.IR wget (1)'s
-progress bar to stay limited to a reasonable size, thus avoiding the problem
-of garbage symbols all over the place any time the terminal would get resized.
+.SH REFERENCES
+.TP
+[1]
+.I https://vt100.net/docs/vt510-rm/DECSTBM.html
+
+.TP
+[2]
+\(lqchange_scroll_region\(rq in
+.IR terminfo (5)
 
 .SH SEE ALSO
 .IX Header "SEE ALSO"
-.IR ld.so (8),
-.IR dlsym (3),
-.IR ioctl (2),
-.IR ioctl_tty (2),
-.IR ncurses (3NCURSES)
+.IR forkpty (3)
