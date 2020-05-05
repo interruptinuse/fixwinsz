@@ -76,17 +76,17 @@ if __name__ == '__main__':
     class Formatter(argparse.HelpFormatter):
         def _format_usage(self, usage, actions, groups, prefix):
             if prefix is None:
-                prefix = 'Usage: '
+                prefix = "Usage: "
             return super()._format_usage(usage, actions, groups, prefix).rstrip() + "\n"
 
     a = argparse.ArgumentParser(
-        description='Launch command in a resized pty.',
-        usage='fixwinsz WIDTH[xHEIGHT] [--] COMMAND...',
+        description="Launch command in a resized pty.",
+        usage="fixwinsz WIDTH[xHEIGHT] [--] COMMAND...",
         formatter_class=Formatter,
         add_help=False)
     a.add_argument('dim', metavar='DIM', type=str, help=argparse.SUPPRESS)
     a.add_argument('--help', action='help', help=argparse.SUPPRESS)
-    a.add_argument('--version', action='version', version="%(prog)s 0.10", help=argparse.SUPPRESS)
+    a.add_argument('--version', action='version', version='%(prog)s 0.10', help=argparse.SUPPRESS)
     (args, cmd) = a.parse_known_args()
     dim = args.dim.strip()
 
