@@ -90,6 +90,10 @@ if __name__ == '__main__':
     (args, cmd) = a.parse_known_args()
     dim = args.dim.strip()
 
+    if len(cmd) == 0:
+        a.print_usage()
+        sys.exit(1)
+
     try:
         d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
     except:
