@@ -16,6 +16,9 @@ import errno
 import ctypes
 import ctypes.util
 import termios
+import atexit
+import signal
+import threading
 
 
 def getwinsz(fd: int = sys.stdout.fileno()):
@@ -72,6 +75,14 @@ def forkpty(width: int, height: int):
     return (pid, master.value, name.value)
 
 
+def copy_nonblock(fd1, fd2, size=1024):
+    try:
+        data = os.read(fd1, 1024)
+        os.write(fd2, data)
+    except (BlockingIOError, OSError):
+        pass
+
+
 if __name__ == '__main__':
     class Formatter(argparse.HelpFormatter):
         def _format_usage(self, usage, actions, groups, prefix):
@@ -119,51 +130,38 @@ if __name__ == '__main__':
         os.dup2(ewrite, sys.stderr.fileno())
         os.execvp(cmd[0], cmd)
     else:
-        os.set_inheritable(master, True)
-        os.set_inheritable(eread, True)
+        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL, 0)
+        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        flags = fcntl.fcntl(master, fcntl.F_GETFL, 0)
+        fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-        if os.fork():
-            sys.stdin.close()
-            sys.stdout.close()
-            (wpid, wstatus) = os.waitpid(pid, 0)
-            if wpid:
-                rc = os.WEXITSTATUS(wstatus) if os.WIFEXITED(wstatus) else 1
-                sys.exit(rc)
-        else:
-            flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL, 0)
-            fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
-            flags = fcntl.fcntl(master, fcntl.F_GETFL, 0)
-            fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        tios = termios.tcgetattr(sys.stdin.fileno())
+        tios_lflag = tios[3]
+        tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
+        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
 
-            tios = termios.tcgetattr(sys.stdin.fileno())
-            tios_lflag = tios[3]
-            tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
-            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
-
-            while True:
-                try:
-                    data = os.read(master, 1024)
-                    os.write(sys.stdout.fileno(), data)
-                except BlockingIOError:
-                    pass
-                except OSError:
-                    break
-
-                try:
-                    data = os.read(sys.stdin.fileno(), 1024)
-                    os.write(master, data)
-                except BlockingIOError:
-                    pass
-                except OSError:
-                    break
-
-                try:
-                    data = os.read(eread, 1024)
-                    os.write(sys.stderr.fileno(), data)
-                except BlockingIOError:
-                    pass
-                except OSError:
-                    break
-
+        def cleanup():
             tios[3] = tios_lflag
             termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
+        atexit.register(cleanup)
+
+        exiting = False
+        lk = threading.Lock()
+
+        def updateloop():
+            while True:
+                with lk:
+                    if exiting: break
+                copy_nonblock(master, sys.stdout.fileno())
+                copy_nonblock(sys.stdin.fileno(), master)
+                copy_nonblock(eread, sys.stderr.fileno())
+        t = threading.Thread(target=updateloop)
+        t.start()
+
+        (wpid, wstatus) = os.waitpid(pid, 0)
+        if wpid:
+            rc = os.WEXITSTATUS(wstatus) if os.WIFEXITED(wstatus) else 1
+            with lk:
+                exiting = True
+            t.join()
+            sys.exit(rc)
