@@ -101,10 +101,8 @@ if __name__ == '__main__':
         sys.exit(1)
 
     ph, pw = getwinsz()
-
-    locals().update(d)
-    width = int(width)
-    height = int(height) if height else ph
+    width = int(d['width'])
+    height = int(d['height'] if d['height'] is not None else ph)
 
     if width <= 0 or height <= 0:
         sys.stderr.write("fixwinsz: Incorrect tty size: {}x{}\n".format(width, height))
