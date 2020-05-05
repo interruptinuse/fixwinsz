@@ -1,5 +1,5 @@
 .\"
-.Dd May 04, 2020
+.Dd May 05, 2020
 .Os
 .Dt FIXWINSZ 1
 .IX Title "FIXWINSZ 1"
@@ -21,8 +21,16 @@
 is a
 .IR pty (7)
 wrapper which limits the child terminal size to \fIWIDTH\fRx\fIHEIGHT\fR.
-If \fIHEIGHT\fR has not been specified, it is kept unchanged.  \fIWIDTH\fR is
-required.
+If \fIHEIGHT\fR has not been specified, height of the parent terminal is used.
+\fIWIDTH\fR is required.
+
+.SH "OPTIONS"
+.IX Header "OPTIONS"
+.TP
+\fB-W\fR
+If \fIHEIGHT\fR is not specified, ignore \fBSIGWINCH\fR so that \fICOMMAND\fR
+is launched with the height of the parent terminal and stays that way.  By
+default, window height changes are propagated.
 
 .SH "BUGS"
 .IX Header "BUGS"
