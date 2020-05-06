@@ -12,6 +12,7 @@ import time
 import argparse
 import struct
 import fcntl
+import select
 import errno
 import ctypes
 import ctypes.util
@@ -79,12 +80,32 @@ def forkpty(width: int, height: int):
     return (pid, master.value, name.value)
 
 
-def copy_nonblock(fd1, fd2, size=1024):
-    try:
-        data = os.read(fd1, 1024)
-        os.write(fd2, data)
-    except (BlockingIOError, OSError):
-        pass
+class PollingForwarder:
+    def __init__(self):
+        self.ifds = {}
+        self.ofds = set()
+        self.ipoll = select.poll()
+        self.opoll = select.poll()
+
+    def map(self, fdi, fdo):
+        self.ifds[fdi] = fdo
+        self.ofds.add(fdo)
+        self.ipoll.register(fdi, select.POLLIN)
+        self.opoll.register(fdo, select.POLLOUT)
+
+    def forward(self, timeout=1):
+        oevents = set()
+        oevents.update(fd for fd, event in self.opoll.poll(timeout))
+        ievents = self.ipoll.poll(timeout)
+
+        for (fdi, event) in ievents:
+            fdo = self.ifds[fdi]
+            if fdo in oevents:
+                try:
+                    data = os.read(fdi, 1024)
+                    os.write(fdo, data)
+                except OSError:
+                    pass
 
 
 if __name__ == '__main__':
@@ -143,11 +164,6 @@ if __name__ == '__main__':
                 setwinsz(width, newheight, master)
             signal.signal(signal.SIGWINCH, sigwinch)
 
-        flags = fcntl.fcntl(sys.stdin.fileno(), fcntl.F_GETFL, 0)
-        fcntl.fcntl(sys.stdin.fileno(), fcntl.F_SETFL, flags | os.O_NONBLOCK)
-        flags = fcntl.fcntl(master, fcntl.F_GETFL, 0)
-        fcntl.fcntl(master, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
         tios = termios.tcgetattr(sys.stdin.fileno())
         tios_lflag = tios[3]
         tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
@@ -162,12 +178,15 @@ if __name__ == '__main__':
         lk = threading.Lock()
 
         def updateloop():
+            fwd = PollingForwarder()
+            fwd.map(master, 1)
+            fwd.map(0, master)
+            fwd.map(eread, 2)
+
             while True:
+                fwd.forward()
                 with lk:
                     if exiting: break
-                copy_nonblock(master, sys.stdout.fileno())
-                copy_nonblock(sys.stdin.fileno(), master)
-                copy_nonblock(eread, sys.stderr.fileno())
         t = threading.Thread(target=updateloop)
         t.start()
 
