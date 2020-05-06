@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Usage: fixwinsz [-W] WIDTH[xHEIGHT] [--] COMMAND [ARGS]...
 # Run COMMAND in a pty restricted to WIDTHxHEIGHT dimensions.
 #
