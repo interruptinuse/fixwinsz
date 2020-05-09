@@ -109,6 +109,23 @@ class PollingForwarder:
 
 
 if __name__ == '__main__':
+    def excepthook(errtype, value, traceback):
+        if issubclass(errtype, KeyboardInterrupt):
+            return
+        ln = traceback.tb_lineno
+        et = errtype.__name__
+        sys.stderr.write("fixwinsz[{}]: FATAL: {}: ".format(ln, et))
+        args = value.args
+        if 'format' in dir(args[0]):
+            estr = args[0].format(*args[1:])
+        else:
+            estr = "{!r}".format(args)
+        sys.stderr.write(estr.strip())
+        sys.stderr.write("\n")
+        sys.stderr.flush()
+        sys.exit(1)
+    sys.excepthook = excepthook
+
     class Formatter(argparse.HelpFormatter):
         def _format_usage(self, usage, actions, groups, prefix):
             if prefix is None:
@@ -138,16 +155,14 @@ if __name__ == '__main__':
     try:
         d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
     except:
-        sys.stderr.write("fixwinsz: Incorrect tty size format: {}\n".format(repr(dim)))
-        sys.exit(1)
+        raise ValueError("Incorrect tty size format: {!r}", dim)
 
     ph, pw = getwinsz()
     width = int(d['width'])
     height = int(d['height'] if d['height'] is not None else ph)
 
     if width <= 0 or height <= 0:
-        sys.stderr.write("fixwinsz: Incorrect tty size: {}x{}\n".format(width, height))
-        sys.exit(1)
+        raise ValueError("Incorrect tty size: {}x{}", width, height)
 
     (eread, ewrite) = os.pipe2(os.O_NONBLOCK)
     (pid, master, name) = forkpty(width, height)
