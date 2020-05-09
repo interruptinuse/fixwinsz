@@ -120,14 +120,16 @@ if __name__ == '__main__':
         usage="fixwinsz [-W] WIDTH[xHEIGHT] [--] COMMAND...",
         formatter_class=Formatter,
         add_help=False)
-    a.add_argument('dim', metavar='DIM', type=str, help=argparse.SUPPRESS)
+    a.add_argument('dim', metavar='WIDTH[xHEIGHT]', type=str, help=argparse.SUPPRESS)
+    a.add_argument('cmd', metavar='COMMAND...', type=str, nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
     a.add_argument('-W', dest='winch', action='store_false', help="Ignore parent SIGWINCH when HEIGHT unspecified")
     a.add_argument('--help', action='help', help=argparse.SUPPRESS)
     a.add_argument('--version', action='version', version='%(prog)s 0.10', help=argparse.SUPPRESS)
     a._optionals.title = "Optional arguments"
     a.set_defaults(winch=True)
-    (args, cmd) = a.parse_known_args()
+    args = a.parse_args()
     dim = args.dim.strip()
+    cmd = args.cmd
 
     if len(cmd) == 0:
         a.print_usage()
