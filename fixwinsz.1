@@ -27,10 +27,43 @@ If \fIHEIGHT\fR has not been specified, height of the parent terminal is used.
 .SH "OPTIONS"
 .IX Header "OPTIONS"
 .TP
-\fB-W\fR
+-W
 If \fIHEIGHT\fR is not specified, ignore \fBSIGWINCH\fR so that \fICOMMAND\fR
 is launched with the height of the parent terminal and stays that way.  By
 default, window height changes are propagated.
+.TP
+--stderr=\fBPTY\fR|\fBFIFO\fR|\fBMUX\fR|\fBDETECT\fR|\fBDISCARD\fR  (default: \fBDETECT\fR)
+Choose how to handle \fBCOMMAND\fR's standard error output.
+.RS
+.RS
+.TP
+.B PTY
+Open a separate pty for stderr.  This strategy is intended for programs that use
+stderr for error reporting and determine whether to use colors with, e.g.\&
+.IR isatty (3).
+However, by convention, stdout and stderr usually refer to the same
+(controlling) terminal, so not all programs may work correctly.
+.TP
+.B FIFO
+Open a FIFO for stderr.
+.TP
+.B MUX
+Bind stderr to the controlling terminal.  In the parent
+.IR fixwinsz (1)
+process, stderr will be (irreversibly) mixed with stdout.
+.TP
+.B DETECT
+If stderr of the parent
+.IR fixwinsz (1)
+process is a tty, handle stderr as \fBPTY\fR, and as \fBFIFO\fR otherwise.
+.TP
+.B DISCARD
+Open a non-tty descriptor for child stderr and discard its output.
+.RE
+.RE
+.PP
+Note that currently, stdin and stdout always behave as if they were \fBDETECT\fR,
+with the caveat that they share \fBCOMMAND\fR's controlling terminal.
 
 .SH "BUGS"
 .IX Header "BUGS"

@@ -22,22 +22,32 @@ import signal
 import threading
 
 
-def getwinsz(fd: int = sys.stdout.fileno()):
+STDIN_FILENO = sys.stdin.fileno()
+STDOUT_FILENO = sys.stdout.fileno()
+STDERR_FILENO = sys.stderr.fileno()
+
+
+def getwinsz(fd: int = STDOUT_FILENO):
     """
     Return size (LINES, COLUMNS) of the tty associated with the descriptor.
     """
     s = struct.pack('HHHH', 0, 0, 0, 0)
-    s = struct.unpack('HHHH', fcntl.ioctl(fd, termios.TIOCGWINSZ, s))
-    return (s[0], s[1])
+    try:
+        s = struct.unpack('HHHH', fcntl.ioctl(fd, termios.TIOCGWINSZ, s))
+        return (s[0], s[1])
+    except OSError as e:
+        if e.args[0] == errno.ENOTTY:
+            return (None, None)
 
 
-def setwinsz(width: int, height: int, fd: int):
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', height, width, 0, 0))
+def setwinsz(width: int, height: int, *fds):
+    for fd in fds:
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', height, width, 0, 0))
 
 
-def forkpty(width: int, height: int):
+def openpty(width: int, height: int):
     """
-    Return (pid, master, name)
+    Return (result, amaster, aslave, name)
     """
     class winsize(ctypes.Structure):
         _fields_ = [
@@ -58,10 +68,11 @@ def forkpty(width: int, height: int):
     if height < 0 or height > max_ushort:
         raise ValueError("height overflows unsigned short")
 
-    libutil = ctypes.CDLL(ctypes.util.find_library('util'))
-    _forkpty = libutil.forkpty
-    _forkpty.restype = ctypes.c_int
-    _forkpty.argtypes = [
+    libutil = ctypes.CDLL(ctypes.util.find_library('util'), use_errno=True)
+    _openpty = libutil.openpty
+    _openpty.restype = ctypes.c_int
+    _openpty.argtypes = [
+        ctypes.POINTER(ctypes.c_int),
         ctypes.POINTER(ctypes.c_int),
         ctypes.c_char_p,
         ctypes.c_char_p, # Don't use the termios arg
@@ -73,11 +84,12 @@ def forkpty(width: int, height: int):
     ws.ws_row = ctypes.c_ushort(height)
     ws.xpixel = ctypes.c_ushort(0)
     ws.ypixel = ctypes.c_ushort(0)
-    master = ctypes.c_int()
-    name = ctypes.create_string_buffer(1024)
+    amaster = ctypes.c_int()
+    aslave = ctypes.c_int()
+    name = ctypes.create_string_buffer(4096)
 
-    pid = _forkpty(master, name, None, ws)
-    return (pid, master.value, name.value)
+    result = _openpty(amaster, aslave, name, None, ws)
+    return (result, amaster.value, aslave.value, name.value)
 
 
 class PollingForwarder:
@@ -140,6 +152,7 @@ if __name__ == '__main__':
     a.add_argument('dim', metavar='WIDTH[xHEIGHT]', type=str, help=argparse.SUPPRESS)
     a.add_argument('cmd', metavar='COMMAND...', type=str, nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
     a.add_argument('-W', dest='winch', action='store_false', help="Ignore parent SIGWINCH when HEIGHT unspecified")
+    a.add_argument('--stderr', dest='stderr', metavar='PTY|FIFO|MUX|DETECT|DISCARD', type=str.upper, choices=['PTY', 'FIFO', 'MUX', 'DETECT', 'DISCARD'], default='DETECT', help="Handle COMMAND's stderr (see fixwinsz(1))")
     a.add_argument('--help', action='help', help=argparse.SUPPRESS)
     a.add_argument('--version', action='version', version='%(prog)s 0.10', help=argparse.SUPPRESS)
     a._optionals.title = "Optional arguments"
@@ -164,31 +177,82 @@ if __name__ == '__main__':
     if width <= 0 or height <= 0:
         raise ValueError("Incorrect tty size: {}x{}", width, height)
 
-    (eread, ewrite) = os.pipe2(os.O_NONBLOCK)
-    (pid, master, name) = forkpty(width, height)
+    result, amaster, aslave, name = openpty(width, height)
+    if result != 0:
+        raise OSError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
 
-    os.set_inheritable(eread, True)
-    os.set_inheritable(ewrite, True)
-    os.set_inheritable(master, True)
+    if os.isatty(STDIN_FILENO):
+        stdin_read, stdin_write = aslave, amaster
+    else:
+        stdin_read, stdin_write = os.pipe()
+
+    if os.isatty(STDOUT_FILENO):
+        stdout_read, stdout_write = amaster, aslave
+    else:
+        stdout_read, stdout_write = os.pipe()
+
+    if args.stderr == 'DETECT':
+        args.stderr = 'PTY' if os.isatty(STDERR_FILENO) else 'FIFO'
+
+    stderr_read = stderr_write = None
+    eresult = emaster = eslave = ename = None
+    if   args.stderr == 'PTY':
+        eresult, emaster, eslave, ename = openpty(width, height)
+        if eresult != 0:
+            raise OSError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
+        stderr_read, stderr_write = emaster, eslave
+    elif args.stderr in ['FIFO', 'DISCARD']:
+        stderr_read, stderr_write = os.pipe()
+    elif args.stderr == 'MUX':
+        stderr_read, stderr_write = None, aslave
+    else:
+        raise ValueError("Illegal value for args.stderr: {!r}", args.stderr)
+
+    inheritables  = []
+    inheritables += [stdin_read, stdin_write]
+    inheritables += [stdout_read, stdout_write]
+    inheritables += [stderr_read, stderr_write]
+    inheritables += [amaster, aslave]
+    for fd in filter(lambda fd: fd is not None, inheritables):
+        os.set_inheritable(fd, True)
+
+    pid = os.fork()
 
     if pid == 0:
-        os.dup2(ewrite, sys.stderr.fileno())
+        os.setsid()
+        fcntl.ioctl(aslave, termios.TIOCSCTTY)
+
+        os.dup2(stdin_read, STDIN_FILENO)
+        os.dup2(stdout_write, STDOUT_FILENO)
+        os.dup2(stderr_write, STDERR_FILENO)
+
+        for fd in [amaster, aslave, emaster, eslave, stdin_read, stdin_write,
+                   stdout_read, stdout_write, stderr_read, stderr_write]:
+            if fd is None: continue
+            try:
+                os.close(fd)
+            except OSError as e:
+                if e.args[0] != errno.EBADF:
+                    raise
         os.execvp(cmd[0], cmd)
     else:
-        if args.winch and 'height' in d:
+        if args.winch and d.get('height', None) is None:
+            winsz_fds = [amaster]
+            if args.stderr == 'PTY':
+                winsz_fds += [stderr_read]
             def sigwinch(sig, frame):
                 newheight, newwidth = getwinsz()
-                setwinsz(width, newheight, master)
+                setwinsz(width, newheight, *winsz_fds)
             signal.signal(signal.SIGWINCH, sigwinch)
 
-        tios = termios.tcgetattr(sys.stdin.fileno())
+        tios = termios.tcgetattr(STDIN_FILENO)
         tios_lflag = tios[3]
         tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
-        termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
+        termios.tcsetattr(STDIN_FILENO, termios.TCSANOW, tios)
 
         def cleanup():
             tios[3] = tios_lflag
-            termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, tios)
+            termios.tcsetattr(STDIN_FILENO, termios.TCSANOW, tios)
         atexit.register(cleanup)
 
         exiting = False
@@ -196,9 +260,15 @@ if __name__ == '__main__':
 
         def updateloop():
             fwd = PollingForwarder()
-            fwd.map(master, 1)
-            fwd.map(0, master)
-            fwd.map(eread, 2)
+            fwd.map(STDIN_FILENO, stdin_write)
+            fwd.map(stdout_read, STDOUT_FILENO)
+            if   args.stderr == 'MUX':
+                pass
+            elif args.stderr == 'DISCARD':
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                fwd.map(stderr_read, devnull)
+            else:
+                fwd.map(stderr_read, STDERR_FILENO)
 
             while True:
                 fwd.forward()
