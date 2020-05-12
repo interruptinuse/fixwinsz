@@ -1,3 +1,10 @@
+v0.11 (2020-05-12)
+ ADDED:   Propagate SIGWINCH to COMMAND, add -W
+ ADDED:   Add --stderr
+ CHANGED: Detect parent tty like tput (at fds 2,1,0)
+ FIXED:   Poll ptmx to avoid nondeterminism
+ FIXED:   Show better error messages
+
 v0.10 (2020-05-04)
  CHANGED: Rewrite in Python, use forkpty(3)
  REMOVED: -s/-S (scroll region is not handled anymore)

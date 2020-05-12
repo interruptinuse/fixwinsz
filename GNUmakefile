@@ -6,7 +6,7 @@ GZIP    = gzip
 INSTALL = install
 TOUCH   = touch
 MAN     = man
-VERSION = 0.10
+VERSION = 0.11
 TARBALL = fixwinsz-$(VERSION).tar
 BINDIR  = $(PREFIX)/bin
 

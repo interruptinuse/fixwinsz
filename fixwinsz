@@ -189,7 +189,7 @@ if __name__ == '__main__':
     a.add_argument('-W', dest='winch', action='store_false', help="Ignore parent SIGWINCH when HEIGHT unspecified")
     a.add_argument('--stderr', dest='stderr', metavar='PTY|FIFO|MUX|DETECT|DISCARD', type=str.upper, choices=['PTY', 'FIFO', 'MUX', 'DETECT', 'DISCARD'], default='DETECT', help="Handle COMMAND's stderr (see fixwinsz(1))")
     a.add_argument('--help', action='help', help=argparse.SUPPRESS)
-    a.add_argument('--version', action='version', version='%(prog)s 0.10', help=argparse.SUPPRESS)
+    a.add_argument('--version', action='version', version='%(prog)s 0.11', help=argparse.SUPPRESS)
     a._optionals.title = "OPTIONS"
     a.set_defaults(winch=True)
     args = a.parse_args()
