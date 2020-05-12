@@ -181,7 +181,7 @@ if __name__ == '__main__':
 
     a = argparse.ArgumentParser(
         description="Launch command in a resized pty.",
-        usage="fixwinsz [-W] WIDTH[xHEIGHT] [--] COMMAND...",
+        usage="fixwinsz [OPTIONS...] WIDTH[xHEIGHT] [--] COMMAND...",
         formatter_class=Formatter,
         add_help=False)
     a.add_argument('dim', metavar='WIDTH[xHEIGHT]', type=str, help=argparse.SUPPRESS)
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     a.add_argument('--stderr', dest='stderr', metavar='PTY|FIFO|MUX|DETECT|DISCARD', type=str.upper, choices=['PTY', 'FIFO', 'MUX', 'DETECT', 'DISCARD'], default='DETECT', help="Handle COMMAND's stderr (see fixwinsz(1))")
     a.add_argument('--help', action='help', help=argparse.SUPPRESS)
     a.add_argument('--version', action='version', version='%(prog)s 0.10', help=argparse.SUPPRESS)
-    a._optionals.title = "Optional arguments"
+    a._optionals.title = "OPTIONS"
     a.set_defaults(winch=True)
     args = a.parse_args()
     dim = args.dim.strip()
