@@ -14,6 +14,8 @@ import struct
 import fcntl
 import select
 import errno
+import inspect
+import traceback
 import ctypes
 import ctypes.util
 import termios
@@ -60,13 +62,13 @@ def openpty(width: int, height: int):
     max_ushort = 2 ** (ctypes.sizeof(ctypes.c_ushort) * 8) - 1
 
     if (not isinstance(width, int)):
-        raise ValueError("width is not an int")
+        raise ValueError("Width is not an int")
     if width < 0 or width > max_ushort:
-        raise ValueError("width overflows unsigned short")
+        raise ValueError("Width overflows unsigned short")
     if (not isinstance(height, int)):
-        raise ValueError("width is not an int")
+        raise ValueError("Height is not an int")
     if height < 0 or height > max_ushort:
-        raise ValueError("height overflows unsigned short")
+        raise ValueError("Height overflows unsigned short")
 
     libutil = ctypes.CDLL(ctypes.util.find_library('util'), use_errno=True)
     _openpty = libutil.openpty
@@ -120,21 +122,54 @@ class PollingForwarder:
                     pass
 
 
+def complain(line: int, *args, **kwargs):
+    if line in [None, 0]:
+        line = inspect.getframeinfo(inspect.currentframe().f_back).lineno
+    sys.stderr.write("fixwinsz[{:d}]: ".format(line))
+    sys.stderr.write(args[0].format(args[1:], **kwargs).strip())
+    sys.stderr.write("\n")
+    sys.stderr.flush()
+
+
+def classname(c):
+    if not isinstance(c, type):
+        c = type(c)
+    blacklist = ['builtins', '__main__']
+    module = '{}.'.format(c.__module__) if c.__module__ not in blacklist else ''
+    return "{}{}".format(module, c.__name__)
+
+
+def clamp(n, smallest, largest):
+    return max(smallest, min(n, largest))
+
+
 if __name__ == '__main__':
-    def excepthook(errtype, value, traceback):
+    class FixwinszError(ValueError):
+        def __str__(self):
+            return self.args[0].format(*self.args[1:])
+
+    def excepthook(errtype, value, tb):
         if issubclass(errtype, KeyboardInterrupt):
             return
-        ln = traceback.tb_lineno
-        et = errtype.__name__
-        sys.stderr.write("fixwinsz[{}]: FATAL: {}: ".format(ln, et))
+        ln = tb.tb_lineno
+        et = classname(errtype)
         args = value.args
-        if 'format' in dir(args[0]):
-            estr = args[0].format(*args[1:])
+        printable = (str, FixwinszError)
+        try:
+            frames = traceback.extract_tb(tb)
+            fname = frames[clamp(1, 0, len(frames)-1)].name
+            fname = '' if fname == '<module>' else "in {}: ".format(fname)
+        except:
+            fname = ''
+        if isinstance(value, printable):
+            msg = "{}".format(value)
+        elif isinstance(args[0], printable) and len(args) == 1:
+            msg = "{}: {}".format(et, args[0])
+        elif isinstance(value, OSError):
+            msg = "{}".format(value.strerror)
         else:
-            estr = "{!r}".format(args)
-        sys.stderr.write(estr.strip())
-        sys.stderr.write("\n")
-        sys.stderr.flush()
+            msg = "{}: {!r}".format(et, args)
+        complain(ln, "FATAL: {}{}".format(fname, msg))
         sys.exit(1)
     sys.excepthook = excepthook
 
@@ -181,7 +216,7 @@ if __name__ == '__main__':
     try:
         d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
     except:
-        raise ValueError("Incorrect tty size format: {!r}", dim)
+        raise FixwinszError("Incorrect tty size format: {!r}", dim)
 
     ph, pw = getwinsz(pterm)
     width = int(d['width'])
@@ -194,14 +229,14 @@ if __name__ == '__main__':
             pass
 
     if height is None:
-        raise ValueError("Unable to obtain terminal height from either fd={} or $LINES", pterm)
+        raise FixwinszError("Unable to obtain terminal height from either fd={} or $LINES", pterm)
 
     if width <= 0 or height <= 0:
-        raise ValueError("Incorrect tty size: {}x{}", width, height)
+        raise FixwinszError("Incorrect tty size: {}x{}", width, height)
 
     result, amaster, aslave, name = openpty(width, height)
     if result != 0:
-        raise OSError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
+        raise FixwinszError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
 
     if os.isatty(STDIN_FILENO):
         stdin_read, stdin_write = aslave, amaster
@@ -221,14 +256,14 @@ if __name__ == '__main__':
     if   args.stderr == 'PTY':
         eresult, emaster, eslave, ename = openpty(width, height)
         if eresult != 0:
-            raise OSError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
+            raise FixwinszError("openpty(3) failed: {}", os.strerror(ctypes.get_errno()))
         stderr_read, stderr_write = emaster, eslave
     elif args.stderr in ['FIFO', 'DISCARD']:
         stderr_read, stderr_write = os.pipe()
     elif args.stderr == 'MUX':
         stderr_read, stderr_write = None, aslave
     else:
-        raise ValueError("Illegal value for args.stderr: {!r}", args.stderr)
+        raise FixwinszError("Illegal value for args.stderr: {!r}", args.stderr)
 
     inheritables  = []
     inheritables += [stdin_read, stdin_write]
