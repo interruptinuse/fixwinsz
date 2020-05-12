@@ -165,14 +165,36 @@ if __name__ == '__main__':
         a.print_usage()
         sys.exit(1)
 
+    if os.isatty(STDERR_FILENO):
+        pterm = STDERR_FILENO
+    elif os.isatty(STDOUT_FILENO):
+        pterm = STDOUT_FILENO
+    elif os.isatty(STDIN_FILENO):
+        pterm = STDIN_FILENO
+    else:
+        try:
+            ctty = os.ctermid()
+            pterm = os.open(ctty, os.O_RDWR)
+        except Exception as e:
+            raise FixwinszError("Could not find parent terminal: {}", e)
+
     try:
         d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
     except:
         raise ValueError("Incorrect tty size format: {!r}", dim)
 
-    ph, pw = getwinsz()
+    ph, pw = getwinsz(pterm)
     width = int(d['width'])
     height = int(d['height'] if d['height'] is not None else ph)
+
+    if height is None:
+        try:
+            height = int(os.environ.get("LINES", None))
+        except:
+            pass
+
+    if height is None:
+        raise ValueError("Unable to obtain terminal height from either fd={} or $LINES", pterm)
 
     if width <= 0 or height <= 0:
         raise ValueError("Incorrect tty size: {}x{}", width, height)
@@ -226,8 +248,11 @@ if __name__ == '__main__':
         os.dup2(stdout_write, STDOUT_FILENO)
         os.dup2(stderr_write, STDERR_FILENO)
 
-        for fd in [amaster, aslave, emaster, eslave, stdin_read, stdin_write,
-                   stdout_read, stdout_write, stderr_read, stderr_write]:
+        closefds = [amaster, aslave, emaster, eslave, stdin_read, stdin_write,
+                    stdout_read, stdout_write, stderr_read, stderr_write]
+        if pterm not in range(3):
+            closefds += [pterm]
+        for fd in closefds:
             if fd is None: continue
             try:
                 os.close(fd)
@@ -245,14 +270,14 @@ if __name__ == '__main__':
                 setwinsz(width, newheight, *winsz_fds)
             signal.signal(signal.SIGWINCH, sigwinch)
 
-        tios = termios.tcgetattr(STDIN_FILENO)
+        tios = termios.tcgetattr(pterm)
         tios_lflag = tios[3]
         tios[3] = tios[3] & ~termios.ICANON & ~termios.ECHO & ~termios.ISIG
-        termios.tcsetattr(STDIN_FILENO, termios.TCSANOW, tios)
+        termios.tcsetattr(pterm, termios.TCSANOW, tios)
 
         def cleanup():
             tios[3] = tios_lflag
-            termios.tcsetattr(STDIN_FILENO, termios.TCSANOW, tios)
+            termios.tcsetattr(pterm, termios.TCSANOW, tios)
         atexit.register(cleanup)
 
         exiting = False
