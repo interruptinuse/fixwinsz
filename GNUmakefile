@@ -29,7 +29,7 @@ install: fixwinsz
 	$(INSTALL) -D -t "$(BINDIR)/" fixwinsz
 
 fixwinsz.1.txt: fixwinsz.1
-	env LC_ALL=C MANWIDTH=80 $(MAN) --nh -P cat "$(shell readlink -e $^)" > $@
+	env LC_ALL=C MANWIDTH=80 $(MAN) --nh -P cat "$(shell readlink -e -- $^)" > $@
 
 clean:
 	rm -f $(shell cat .gitignore) $(TARBALL) $(TARBALL).gz
@@ -41,7 +41,7 @@ dist: clean fixwinsz.1.txt
 	  --owner=user:1000 --group=user:1000 --dereference \
 	  --mtime="$(shell env TZ=UTC $(DATE) -d 00:00)" \
 	  --transform="s:^:fixwinsz-$(VERSION)/:" -T-
-	$(TOUCH) -d 00:00 $(TARBALL)
+	env TZ=UTC $(TOUCH) -d 00:00 $(TARBALL)
 	$(GZIP) --no-name --best --rsyncable $(TARBALL)
 	$(TAR) -tvzf $(TARBALL).gz
 

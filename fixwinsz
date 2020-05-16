@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-# Usage: fixwinsz [-W] WIDTH[xHEIGHT] [--] COMMAND [ARGS]...
-# Run COMMAND in a pty restricted to WIDTHxHEIGHT dimensions.
-#
-# XXX: snoop and apply/emulate DECSTBM/CSR?
+# Usage: fixwinsz [OPTIONS...] WIDTH[xHEIGHT] [--] COMMAND...
+# Launch COMMAND in a resized pty.
 
 import os
 import sys
@@ -40,6 +38,7 @@ def getwinsz(fd: int = STDOUT_FILENO):
     except OSError as e:
         if e.args[0] == errno.ENOTTY:
             return (None, None)
+        raise
 
 
 def setwinsz(width: int, height: int, *fds):
@@ -139,8 +138,9 @@ def classname(c):
     return "{}{}".format(module, c.__name__)
 
 
-def clamp(n, smallest, largest):
-    return max(smallest, min(n, largest))
+def clamp(n, a, b):
+    a, b = min(a, b), max(a, b)
+    return max(a, min(n, b))
 
 
 if __name__ == '__main__':
@@ -180,7 +180,7 @@ if __name__ == '__main__':
             return super()._format_usage(usage, actions, groups, prefix).rstrip() + "\n"
 
     a = argparse.ArgumentParser(
-        description="Launch command in a resized pty.",
+        description="Launch COMMAND in a resized pty.",
         usage="fixwinsz [OPTIONS...] WIDTH[xHEIGHT] [--] COMMAND...",
         formatter_class=Formatter,
         add_help=False)
@@ -211,12 +211,12 @@ if __name__ == '__main__':
             ctty = os.ctermid()
             pterm = os.open(ctty, os.O_RDWR)
         except Exception as e:
-            raise FixwinszError("Could not find parent terminal: {}", e)
+            raise FixwinszError("Could not find parent terminal: {}", e) from None
 
     try:
         d = re.search(r'^(?P<width>\d+)([ x:,]+(?P<height>\d+)?)?$', dim).groupdict()
-    except:
-        raise FixwinszError("Incorrect tty size format: {!r}", dim)
+    except AttributeError:
+        raise FixwinszError("Incorrect tty size format: {!r}", dim) from None
 
     ph, pw = getwinsz(pterm)
     width = int(d['width'])
@@ -265,13 +265,10 @@ if __name__ == '__main__':
     else:
         raise FixwinszError("Illegal value for args.stderr: {!r}", args.stderr)
 
-    inheritables  = []
-    inheritables += [stdin_read, stdin_write]
-    inheritables += [stdout_read, stdout_write]
-    inheritables += [stderr_read, stderr_write]
-    inheritables += [amaster, aslave]
-    for fd in filter(lambda fd: fd is not None, inheritables):
-        os.set_inheritable(fd, True)
+    for fd in [stdin_read, stdin_write, stdout_read, stdout_write,
+               stderr_read, stderr_write, amaster, aslave]:
+        if fd is not None:
+            os.set_inheritable(fd, True)
 
     pid = os.fork()
 
@@ -318,7 +315,7 @@ if __name__ == '__main__':
         atexit.register(cleanup)
 
         exiting = False
-        lk = threading.Lock()
+        lock = threading.Lock()
 
         def updateloop():
             fwd = PollingForwarder()
@@ -334,7 +331,7 @@ if __name__ == '__main__':
 
             while True:
                 fwd.forward()
-                with lk:
+                with lock:
                     if exiting: break
         t = threading.Thread(target=updateloop)
         t.start()
@@ -342,7 +339,7 @@ if __name__ == '__main__':
         (wpid, wstatus) = os.waitpid(pid, 0)
         if wpid:
             rc = os.WEXITSTATUS(wstatus) if os.WIFEXITED(wstatus) else 1
-            with lk:
+            with lock:
                 exiting = True
             t.join()
             sys.exit(rc)
