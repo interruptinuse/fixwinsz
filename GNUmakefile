@@ -10,6 +10,16 @@ VERSION = 0.11
 TARBALL = fixwinsz-$(VERSION).tar
 BINDIR  = $(PREFIX)/bin
 
+SYSTEM := $(sh uname -s)
+
+ifeq ($(SYSTEM), "FreeBSD")
+TAR     = gtar
+LS      = gls
+DATE    = gdate
+INSTALL = ginstall
+TOUCH   = gtouch
+endif
+
 fixwinsz:
 
 install: fixwinsz
@@ -29,7 +39,7 @@ dist: clean fixwinsz.1.txt
 	| $(TAR) -cf $(TARBALL) \
 	  --exclude='*.tar*' --exclude='.git' --exclude-from=.gitignore \
 	  --owner=user:1000 --group=user:1000 --dereference \
-	  --mtime="$(shell env TZ=UTC date -d 00:00)" \
+	  --mtime="$(shell env TZ=UTC $(DATE) -d 00:00)" \
 	  --transform="s:^:fixwinsz-$(VERSION)/:" -T-
 	$(TOUCH) -d 00:00 $(TARBALL)
 	$(GZIP) --no-name --best --rsyncable $(TARBALL)
