@@ -303,6 +303,7 @@ if __name__ == '__main__':
             def sigwinch(sig, frame):
                 newheight, newwidth = getwinsz()
                 setwinsz(width, newheight, *winsz_fds)
+                os.kill(pid, sig)
             signal.signal(signal.SIGWINCH, sigwinch)
 
         tios = termios.tcgetattr(pterm)
