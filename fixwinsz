@@ -224,8 +224,8 @@ if __name__ == '__main__':
 
     if height is None:
         try:
-            height = int(os.environ.get("LINES", None))
-        except:
+            height = int(os.environ.get("LINES"))
+        except TypeError:
             pass
 
     if height is None:
