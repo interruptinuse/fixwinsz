@@ -261,7 +261,7 @@ if __name__ == '__main__':
     elif args.stderr in ['FIFO', 'DISCARD']:
         stderr_read, stderr_write = os.pipe()
     elif args.stderr == 'MUX':
-        stderr_read, stderr_write = None, aslave
+        stderr_read, stderr_write = None, stdout_write
     else:
         raise FixwinszError("Illegal value for args.stderr: {!r}", args.stderr)
 
