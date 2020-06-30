@@ -126,7 +126,7 @@ def complain(line: int, *args, **kwargs):
     if line in [None, 0]:
         line = inspect.getframeinfo(inspect.currentframe().f_back).lineno
     sys.stderr.write("fixwinsz[{:d}]: ".format(line))
-    sys.stderr.write(args[0].format(args[1:], **kwargs).strip())
+    sys.stderr.write(args[0].format(*args[1:], **kwargs).strip())
     sys.stderr.write("\n")
     sys.stderr.flush()
 
