@@ -302,7 +302,8 @@ if __name__ == '__main__':
                 winsz_fds += [stderr_read]
             def sigwinch(sig, frame):
                 newheight, newwidth = getwinsz()
-                setwinsz(width, newheight, *winsz_fds)
+                if newheight is not None:
+                    setwinsz(width, newheight, *winsz_fds)
                 os.kill(pid, sig)
             signal.signal(signal.SIGWINCH, sigwinch)
 
