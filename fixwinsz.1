@@ -1,89 +1,112 @@
-.Dd May 09, 2020
-.Os
-.Dt FIXWINSZ 1
-.IX Title "FIXWINSZ 1"
-.TH FIXWINSZ 1 "2021-05-17" "fixwinsz 0.12" "Restrict terminal size assumed by programs"
+.Dd June 11, 2021
+.Os Linux
+.Dt FIXWINSZ 1 IND
 
-.SH "NAME"
-.IX Header "NAME"
+
+.Sh NAME
 .Nm fixwinsz
-.Nd restrict terminal size assumed by programs
+.Nd launch command in a resized PTY
 
-.SH "SYNOPSIS"
-.IX Header "SYNOPSIS"
-.B "fixwinsz"
-[\fIOPTIONS\fR...] \fIWIDTH\fR[\fBx\fR\fIHEIGHT\fR] [\fB--\fR]
-\fICOMMAND\fR...
 
-.SH "DESCRIPTION"
-.IX Header "DESCRIPTION"
-.IR fixwinsz (1)
+.Sh SYNOPSIS
+.Nm fixwinsz
+.Op Ar OPTIONS Ns Li ...
+.Ar WIDTH Ns Oo x Ns Ar HEIGHT Oc
+.Oo Fl - Oc
+.Ar COMMAND Ns Li ...
+
+
+.Sh DESCRIPTION
+.Xr fixwinsz 1
 is a
-.IR pty (7)
-wrapper which limits the child terminal size to \fIWIDTH\fRx\fIHEIGHT\fR.
-If \fIHEIGHT\fR has not been specified, height of the parent terminal is used.
-\fIWIDTH\fR is required.
+.Xr pty 7
+wrapper which limits the child terminal size to
+.Ar WIDTH Ns x Ns Ar HEIGHT .
+If
+.Ar HEIGHT
+has not been specified, height of the parent terminal is used.
+.Ar WIDTH
+is required.
 
-.SH "OPTIONS"
-.IX Header "OPTIONS"
-.TP
--W
-If \fIHEIGHT\fR is not specified, ignore \fBSIGWINCH\fR so that \fICOMMAND\fR
-is launched with the height of the parent terminal and stays that way.  By
-default, window height changes are propagated.
-.TP
---stderr=\fBPTY\fR|\fBFIFO\fR|\fBMUX\fR|\fBDETECT\fR|\fBDISCARD\fR  (default: \fBDETECT\fR)
-Choose how to handle \fBCOMMAND\fR's standard error output.
-.RS
-.RS
-.TP
-.B PTY
-Open a separate pty for stderr.  This strategy is intended for programs that use
-stderr for error reporting and determine whether to use colors with, e.g.\&
-.IR isatty (3).
-However, by convention, stdout and stderr usually refer to the same
-(controlling) terminal, so not all programs may work correctly.
-.TP
-.B FIFO
+
+.Sh OPTIONS
+.Bl -tag "-----" -compact
+.It Fl W
+If
+.Ar HEIGHT
+is not specified, ignore
+.Em SIGWINCH
+so that
+.Ar COMMAND
+is launched with the height of the parent terminal and stays that way. By
+default, window height changes are propagated via
+.Em SIGWINCH .
+
+.Sm off
+.It Fl -stderr= Sy PTY | Sy FIFO | Sy MUX | Sy DETECT | Sy DISCARD Ns \~ \~ (default: \~ Sy DETECT )
+.Sm on
+Choose how to handle
+.Sy COMMAND Ns 's
+standard error output:
+
+.Bl -tag -width "DISCARD" -compact -offset indent
+.It Sy PTY
+Open a separate pty for stderr.  This is intended for programs that use stderr
+for error reporting and determine whether to use colors with, e.g.
+.Xr isatty 3 .
+However, by convention, stdout and stderr usually refer to the same (controlling)
+terminal, so not all programs may work correctly.
+.Pp
+.It Sy FIFO
 Open a FIFO for stderr.
-.TP
-.B MUX
-Bind stderr to the controlling terminal.  In the parent
-.IR fixwinsz (1)
+.Pp
+.It Sy MUX
+Bind stderr to the controlling terminal. In the parent
+.Xr fixwinsz 1
 process, stderr will be (irreversibly) mixed with stdout.
-.TP
-.B DETECT
+.Pp
+.It Sy DETECT
 If stderr of the parent
-.IR fixwinsz (1)
-process is a tty, handle stderr as \fBPTY\fR, and as \fBFIFO\fR otherwise.
-.TP
-.B DISCARD
+.Xr fixwinsz 1
+process is a tty, handle stderr as
+.Sy PTY ,
+and as
+.Sy FIFO
+otherwise.
+.Pp
+.It Sy DISCARD
 Open a non-tty descriptor for child stderr and discard its output.
-.RE
-.RE
-.PP
-Note that currently, stdin and stdout always behave as if they were \fBDETECT\fR,
-with the caveat that they share \fBCOMMAND\fR's controlling terminal.
+.El
+.El
+.Pp
+Note that currently, stdin and stdout always behave as if they were
+.Sy DETECT ,
+with the caveat that they share
+.Sy COMMAND Ns 's
+controlling terminal.
 
-.SH "BUGS"
-.IX Header "BUGS"
-.nr step 1 1
-.IP \n[step] 4
-Does not emulate the DECSTBM\fI[1][2]\fR ANSI control code.
-Programs that rely on it, e.g.
-.IR less (1),
-will mangle the output.
 
-.SH "REFERENCES"
-.TP
-[1]
-.I https://vt100.net/docs/vt510-rm/DECSTBM.html
+.Sh BUGS
+.Bl -enum -compact
+.It
+Does not emulate the DECSTBM
+.Em [1][2]
+ANSI control code. Programs that rely on it, e.g.
+.Xr less 1 ,
+will mangle the output and leave the terminal with incorrect margins.
+.El
 
-.TP
-[2]
-\(lqchange_scroll_region\(rq in
-.IR terminfo (5)
 
-.SH "SEE ALSO"
-.IX Header "SEE ALSO"
-.IR forkpty (3)
+.Sh REFERENCES
+.Bl -tag -width "[1]" -compact
+.It Em [1]
+.Lk https://vt100.net/docs/vt510-rm/DECSTBM.html "DECSTBM"
+.It Em [2]
+.Ql change_scroll_region
+in
+.Xr terminfo(5)
+.El
+
+
+.Sh SEE ALSO
+.Xr forkpty 3
