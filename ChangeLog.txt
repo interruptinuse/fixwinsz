@@ -1,3 +1,8 @@
+v0.12 (2021-05-17)
+ ADDED:   Makefile defaults for FreeBSD
+ FIXED:   Forward SIGWINCH
+ FIXED:   stderr no longer vanishes when stdout is not a tty
+
 v0.11 (2020-05-12)
  ADDED:   Propagate SIGWINCH to COMMAND, add -W
  ADDED:   Add --stderr
